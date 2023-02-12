@@ -3,6 +3,7 @@ import datetime
 import json
 import random
 import os
+import re
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable
 from enum import Enum
@@ -552,15 +553,19 @@ async def fetch_all_top5(db):
         f_entries = await fetch_event_top_five(db, f"F{event}")
         counter = 1
         while counter <= 5:
+            f_swimmer_name = re.split(',| ', f_entries[counter - 1]['swimmer'])
+            f_name = f"{f_swimmer_name[2]} {f_swimmer_name[0]}"
+            m_swimmer_name = re.split(',| ', m_entries[counter - 1]['swimmer'])
+            m_name = f"{m_swimmer_name[2]} {m_swimmer_name[0]}"
             if counter == 1:
-                row = [counter, f_entries[counter - 1]['swimmer'], f_entries[counter - 1]['time'],
+                row = [counter, f_name, f_entries[counter - 1]['time'],
                        f_entries[counter - 1]['season'], get_event_name(event), m_entries[counter - 1]['season'],
-                       m_entries[counter - 1]['time'], m_entries[counter - 1]['swimmer'], counter]
+                       m_entries[counter - 1]['time'], m_name, counter]
             else:
                 try:
-                    row = [counter, f_entries[counter - 1]['swimmer'], f_entries[counter - 1]['time'],
+                    row = [counter, f_name, f_entries[counter - 1]['time'],
                            f_entries[counter - 1]['season'], "", m_entries[counter - 1]['season'],
-                           m_entries[counter - 1]['time'], m_entries[counter - 1]['swimmer'], counter]
+                           m_entries[counter - 1]['time'], m_name, counter]
                 except IndexError:
                     pass
             table.append(row)
