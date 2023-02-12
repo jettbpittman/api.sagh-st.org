@@ -13,6 +13,10 @@ from aiohttp import web
 router = web.RouteTableDef()
 
 
+with open("creds.json", "r") as f:
+    creds = json.load(f)
+
+
 class NotFoundException(BaseException):
     pass
 
@@ -319,9 +323,33 @@ def handle_json_error(
     return handler
 
 
+def auth_required(
+        func: Callable[[web.Request], Awaitable[web.Response]]
+) -> Callable[[web.Request], Awaitable[web.Response]]:
+    async def handler(request: web.Request) -> web.Response:
+        try:
+            username = request.headers['user']
+            password = request.headers['password']
+        except KeyError:
+            return web.json_response({
+                "status": "bad request/unauthorized", "reason": "you have not passed proper authentication headers!"},
+                status=400
+            )
+        for user in creds:
+            if user['username'] == username and user['password'] == password:
+                return await func(request)
+            else:
+                return web.json_response({
+                    "status": "forbidden", "reason": "you are not allowed to access this endpoint!"
+                }, status=403
+                )
+    return handler
+
+
 # Swimmer Queries
 @router.post("/swimmers")
 @handle_json_error
+@auth_required
 async def create_swimmer(request: web.Request) -> web.Response:
     info = await request.json()
     first_name = info['first_name']
@@ -370,6 +398,7 @@ async def get_swimmers(request: web.Request) -> web.Response:
 
 # Team Queries
 @router.post("/teams")
+@auth_required
 async def create_team(request: web.Request) -> web.Response:
     info = await request.json()
     name = info['name']
@@ -408,6 +437,7 @@ async def get_team(request: web.Request) -> web.Response:
 
 # Meet Queries
 @router.post("/meets")
+@auth_required
 async def create_meet(request: web.Request) -> web.Response:
     info = await request.json()
     name = info['name']
@@ -444,6 +474,7 @@ async def get_team(request: web.Request) -> web.Response:
 
 # Entry Queries
 @router.post("/entries")
+@auth_required
 async def create_entry(request: web.Request) -> web.Response:
     info = await request.json()
     swimmer = info['swimmer']
@@ -532,6 +563,7 @@ async def get_all_top5(request: web.Request) -> web.Response:
 
 
 @router.get("/top5/update")
+@auth_required
 async def get_all_top5(request: web.Request) -> web.Response:
     db = request.config_dict['DB']
     top5 = await fetch_all_top5(db)
