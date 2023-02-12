@@ -283,6 +283,28 @@ async def fetch_swimmer(db: aiosqlite.Connection, id: int):
         }
 
 
+async def fetch_swimmer_entries(db: aiosqlite.Connection, id: int):
+    async with db.execute(
+            "SELECT * FROM entries WHERE swimmer = ?", [id]
+    ) as cursor:
+        rows = await cursor.fetchall()
+        if not rows:
+            raise NotFoundException(f"Swimmer {id} does not exist!")
+        entries = []
+        for entry in rows:
+            s = await fetch_swimmer(db, entry['swimmer'])
+            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+            entries.append({
+                "swimmer": name,
+                "meet": await fetch_meet(db, entry['meet']),
+                "event": await fetch_event(db, entry['event']),
+                "seed": entry['seed'],
+                "time": entry['time'],
+                "splits": json.loads(entry['splits'])
+            })
+        return entries
+
+
 async def fetch_swimmer_lite(db: aiosqlite.Connection, id: int):
     async with db.execute(
             "SELECT * FROM swimmers WHERE id = ?", [id]
@@ -409,6 +431,14 @@ async def get_swimmers(request: web.Request) -> web.Response:
     db = request.config_dict['DB']
     swimmer = await fetch_swimmer(db, swimmer_id)
     return web.json_response(swimmer)
+
+
+@router.get("/swimmers/{id}/entries")
+async def get_swimmer_all_entries(request: web.Request) -> web.Response:
+    swimmer_id = request.match_info['id']
+    db = request.config_dict['DB']
+    entries = await fetch_swimmer_entries(db, swimmer_id)
+    return web.json_response(entries)
 
 
 # Team Queries
