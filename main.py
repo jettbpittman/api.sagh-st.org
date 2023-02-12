@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable, Dict, List, TypeAlias, Union
 from enum import IntEnum, Enum
+from tabulate import tabulate
 
 import aiosqlite
 from aiohttp import web
@@ -147,7 +148,7 @@ async def fetch_event_all_entries(db: aiosqlite.Connection, id: int):
         return entries
 
 
-async def fetch_event_top_five(db: aiosqlite.Connection, id: int):
+async def fetch_event_top_five(db: aiosqlite.Connection, id: str):
     async with db.execute(
             "SELECT * FROM entries WHERE event = ?", [id]
     ) as cursor:
@@ -156,8 +157,13 @@ async def fetch_event_top_five(db: aiosqlite.Connection, id: int):
             raise NotFoundException(f"Event {id} does not exist!")
         entries = []
         for entry in rows:
+            try:
+                if json.loads(entry['splits'])[0] == 0.0:
+                    continue
+            except IndexError:
+                pass
             s = await fetch_swimmer(db, entry['swimmer'])
-            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}"
+            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
             m = await fetch_meet(db, entry['meet'])
             e = {
                 "swimmer": name,
@@ -307,6 +313,7 @@ def handle_json_error(
                 {"status": str(ex)}, status=404
             )
         except Exception as ex:
+            print(str(ex))
             return web.json_response(
                 {"status": "failed", "reason": str(ex)}, status=400
             )
@@ -485,12 +492,55 @@ async def get_event_all(request: web.Request) -> web.Response:
 
 
 @router.get("/events/{code}/top5")
-@handle_json_error
 async def get_event_top5(request: web.Request) -> web.Response:
     event_code = request.match_info['code']
     db = request.config_dict['DB']
     entries = await fetch_event_top_five(db, event_code)
     return web.json_response(entries)
+
+
+async def fetch_all_top5(db):
+    events = ["200F", "200M", "50F", "100L", "100F", "500F", "100B", "100S"]
+    headers = ["Place", "Name", "Time", "Year", "Event", "Year", "Time", "Name", "Place"]
+    table = []
+    for event in events:
+        m_entries = await fetch_event_top_five(db, f"M{event}")
+        f_entries = await fetch_event_top_five(db, f"F{event}")
+        counter = 1
+        while counter <= 5:
+            if counter == 1:
+                row = [counter, f_entries[counter - 1]['swimmer'], f_entries[counter - 1]['time'],
+                       f_entries[counter - 1]['season'], event, m_entries[counter - 1]['season'],
+                       m_entries[counter - 1]['time'], m_entries[counter - 1]['swimmer'], counter]
+            else:
+                try:
+                    row = [counter, f_entries[counter - 1]['swimmer'], f_entries[counter - 1]['time'],
+                           f_entries[counter - 1]['season'], "", m_entries[counter - 1]['season'],
+                           m_entries[counter - 1]['time'], m_entries[counter - 1]['swimmer'], counter]
+                except IndexError:
+                    pass
+            table.append(row)
+            counter += 1
+    date = datetime.datetime.now()
+    return f'<h2>GHMV Top 5 All Time</h2>\n<p style="color: darkred">UPDATED: {date.day} {date.strftime("%B")} {date.year}</p>\n' + tabulate(
+        table, headers=headers, tablefmt="html")
+
+
+@router.get("/top5")
+async def get_all_top5(request: web.Request) -> web.Response:
+    db = request.config_dict['DB']
+    return web.Response(body=await fetch_all_top5(db))
+
+
+@router.get("/top5/update")
+async def get_all_top5(request: web.Request) -> web.Response:
+    db = request.config_dict['DB']
+    top5 = await fetch_all_top5(db)
+    with open("~/shared/top5-autoupdated.html", "w") as f:
+        f.write(top5)
+    return web.Response(body=top5)
+            
+
 
 
 # Ping
