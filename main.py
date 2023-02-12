@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import json
 import random
+import os
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable
 from enum import Enum
@@ -567,7 +568,7 @@ async def get_all_top5(request: web.Request) -> web.Response:
 async def get_all_top5(request: web.Request) -> web.Response:
     db = request.config_dict['DB']
     top5 = await fetch_all_top5(db)
-    with open("~/shared/top5-autoupdated.html", "w") as f:
+    with open(f'{os.path.expanduser("~")}/shared/top5-autoupdated.html', "w") as f:
         f.write(top5)
     return web.Response(body=top5)
             
