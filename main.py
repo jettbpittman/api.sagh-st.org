@@ -30,6 +30,19 @@ def top5Sort(e):
         return e['time']
 
 
+def get_event_name(e):
+    if e[-1] == "F":
+        return f"{e[:-1]} Freestyle"
+    if e[-1] == "M":
+        return f"{e[:-1]} Individual Medley"
+    if e[-1] == "B":
+        return f"{e[:-1]} Backstroke"
+    if e[-1] == "S":
+        return f"{e[:-1]} Breaststroke"
+    if e[-1] == "L":
+        return f"{e[:-1]} Butterfly"
+
+
 def generate_id(id_type: int, year: int = 0, join_date: int = None) -> int:
     """
 
@@ -541,7 +554,7 @@ async def fetch_all_top5(db):
         while counter <= 5:
             if counter == 1:
                 row = [counter, f_entries[counter - 1]['swimmer'], f_entries[counter - 1]['time'],
-                       f_entries[counter - 1]['season'], event, m_entries[counter - 1]['season'],
+                       f_entries[counter - 1]['season'], get_event_name(event), m_entries[counter - 1]['season'],
                        m_entries[counter - 1]['time'], m_entries[counter - 1]['swimmer'], counter]
             else:
                 try:
@@ -572,8 +585,6 @@ async def get_all_top5(request: web.Request) -> web.Response:
         f.write(top5)
     return web.Response(body=top5)
             
-
-
 
 # Ping
 @router.get("/ping")
