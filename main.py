@@ -77,24 +77,6 @@ class Events(Enum):
     FOUR_FREE_R = "400 Freestyle Relay"
 
 
-async def fetch_team(db: aiosqlite.Connection, id: int):
-    async with db.execute(
-            "SELECT * FROM teams WHERE code = ?", [id]
-    ) as cursor:
-        row = await cursor.fetchone()
-        if not row:
-            raise NotFoundException(f"Team {id} does not exist!")
-        return {
-            "name": row['name'],
-            "address": row['address'],
-            "head_coach": row['head_coach'],
-            "email": row['email'],
-            "phone": row['phone'],
-            "code": row['code'],
-            "roster": await fetch_team_roster(db, id)
-        }
-
-
 async def fetch_entry(db: aiosqlite.Connection, id: int):
     async with db.execute(
             "SELECT * FROM entries WHERE id = ?", [id]
@@ -247,7 +229,19 @@ async def fetch_team_roster(db: aiosqlite.Connection, id: int):
         return roster
 
 
-async def fetch_team_lite(db: aiosqlite.Connection, id: int):
+async def fetch_team_roster_all(db: aiosqlite.Connection, id: int):
+    async with db.execute(
+        "SELECT * FROM swimmers WHERE team = ?", [id]
+    ) as cursor:
+        rows = await cursor.fetchall()
+        roster = []
+        for swimmer in rows:
+            s = await fetch_swimmer_lite(db, swimmer['id'])
+            roster.append(s)
+        return roster
+
+
+async def fetch_team(db: aiosqlite.Connection, id: int):
     async with db.execute(
             "SELECT * FROM teams WHERE code = ?", [id]
     ) as cursor:
@@ -277,8 +271,9 @@ async def fetch_swimmer(db: aiosqlite.Connection, id: int):
             "middle_name": row['middle_name'],
             "last_name": row['last_name'],
             "age": row['age'],
+            "gender": row['gender'],
             "class": row['class'],
-            "team": await fetch_team_lite(db, row['team']),
+            "team": await fetch_team(db, row['team']),
             "active": row['active']
         }
 
@@ -303,6 +298,36 @@ async def fetch_swimmer_entries(db: aiosqlite.Connection, id: int):
                 "splits": json.loads(entry['splits'])
             })
         return entries
+
+
+async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
+    s = await fetch_swimmer_lite(db, id)
+    name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+    g = s['gender'].upper()
+    entries = {}
+    events = [f"{g}200F", f"{g}200M", f"{g}50F", f"{g}100L", f"{g}100F", f"{g}500F", f"{g}100B", f"{g}100S"]
+    for event in events:
+        async with db.execute(
+                "SELECT * FROM entries WHERE swimmer = ? AND time = ( SELECT MIN(time) FROM entries WHERE event = ? AND swimmer = ? )", [id, event, id]
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row is None:
+                entry = {
+                    "swimmer": name,
+                    "time": "NO TIME",
+                    "event": await fetch_event(db, event),
+                }
+            else:
+                entry = {
+                    "swimmer": name,
+                    "meet": await fetch_meet(db, row['meet']),
+                    "event": await fetch_event(db, row['event']),
+                    "seed": row['seed'],
+                    "time": row['time'],
+                    "splits": json.loads(row['splits'])
+            }
+            entries[event] = entry
+    return entries
 
 
 async def fetch_swimmer_entries_event(db: aiosqlite.Connection, id: int, event: str):
@@ -340,6 +365,7 @@ async def fetch_swimmer_lite(db: aiosqlite.Connection, id: int):
             "middle_name": row['middle_name'],
             "last_name": row['last_name'],
             "age": row['age'],
+            "gender": row['gender'],
             "class": row['class'],
             "active": row['active']
         }
@@ -441,7 +467,7 @@ async def create_swimmer(request: web.Request) -> web.Response:
             "last_name": last_name,
             "age": age,
             "class": year,
-            "team": await fetch_team_lite(db, team),
+            "team": await fetch_team(db, team),
             "active": active
         }
     )
@@ -469,6 +495,14 @@ async def get_swimmer_all_entries_event(request: web.Request) -> web.Response:
     event_code = request.match_info['event']
     db = request.config_dict['DB']
     entries = await fetch_swimmer_entries_event(db, swimmer_id, event_code)
+    return web.json_response(entries)
+
+
+@router.get("/swimmers/{id}/best")
+async def get_swimmer_bests(request: web.Request) -> web.Response:
+    swimmer_id = request.match_info['id']
+    db = request.config_dict['DB']
+    entries = await fetch_swimmer_best_times(db, swimmer_id)
     return web.json_response(entries)
 
 
@@ -508,6 +542,22 @@ async def get_team(request: web.Request) -> web.Response:
     team_id = request.match_info['id']
     db = request.config_dict['DB']
     team = await fetch_team(db, team_id)
+    return web.json_response(team)
+
+
+@router.get("/teams/{id}/roster/current")
+async def get_team_roster_c(request: web.Request) -> web.Response:
+    team_id = request.match_info['id']
+    db = request.config_dict['DB']
+    team = await fetch_team_roster(db, team_id)
+    return web.json_response(team)
+
+
+@router.get("/teams/{id}/roster/all")
+async def get_team_roster_c(request: web.Request) -> web.Response:
+    team_id = request.match_info['id']
+    db = request.config_dict['DB']
+    team = await fetch_team_roster_all(db, team_id)
     return web.json_response(team)
 
 
