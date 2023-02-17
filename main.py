@@ -306,47 +306,47 @@ async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
     s = await fetch_swimmer_lite(db, id)
     name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
     g = s['gender'].upper()
-    entries = {}
+    events_list = {}
     events = [f"{g}200F", f"{g}200M", f"{g}50F", f"{g}100L", f"{g}100F", f"{g}500F", f"{g}100B", f"{g}100S"]
     for event in events:
-        async with db.execute(
-                "SELECT * FROM entries WHERE swimmer = ? AND time = ( SELECT MIN(time) FROM entries WHERE event = ? AND swimmer = ? )", [id, event, id]
-        ) as cursor:
-            row = await cursor.fetchone()
-            if row is None:
+        entries = await fetch_swimmer_entries_event(db, id, event)
+        print(entries)
+        if not entries:
+            entry = {
+                "swimmer": name,
+                "time": "NT",
+                "meet": {
+                    "name": ""
+                },
+                "event": await fetch_event(db, event),
+            }
+            events_list[event] = entry
+            continue
+        entries.sort(key=top5Sort)
+        fastest = entries[0]
+        try:
+            if fastest['splits'] == 0.0:
                 entry = {
-                    "swimmer": name,
-                    "time": "NT",
-                    "meet": {
-                        "name": ""
-                    },
-                    "event": await fetch_event(db, event),
-                }
-            else:
-                try:
-                    if json.loads(row['splits'])[0] == 0.0:
-                        entry = {
-                            "swimmer": name,
-                            "time": "NT",
-                            "meet": {
-                                "name": ""
-                            },
-                            "event": await fetch_event(db, event),
-                        }
-                        entries[event] = entry
-                        continue
-                except IndexError:
-                    pass
-                entry = {
-                    "swimmer": name,
-                    "meet": await fetch_meet(db, row['meet']),
-                    "event": await fetch_event(db, event),
-                    "seed": row['seed'],
-                    "time": row['time'],
-                    "splits": json.loads(row['splits'])}
-            pprint.pprint(entry)
-            entries[event] = entry
-    return entries
+                        "swimmer": name,
+                        "time": "NT",
+                        "meet": {
+                            "name": ""
+                        },
+                        "event": await fetch_event(db, event),
+                    }
+                events_list[event] = entry
+                continue
+        except IndexError:
+            pass
+        entry = {
+            "swimmer": name,
+            "meet": fastest['meet'],
+            "event": fastest['event'],
+            "seed": fastest['seed'],
+            "time": fastest['time'],
+            "splits": fastest['splits']}
+        events_list[event] = entry
+    return events_list
 
 
 async def fetch_swimmer_entries_event(db: aiosqlite.Connection, id: int, event: str):
@@ -355,7 +355,7 @@ async def fetch_swimmer_entries_event(db: aiosqlite.Connection, id: int, event: 
     ) as cursor:
         rows = await cursor.fetchall()
         if not rows:
-            raise NotFoundException(f"Swimmer {id} or Event {event} does not exist!")
+            return []
         entries = []
         for entry in rows:
             s = await fetch_swimmer(db, entry['swimmer'])
@@ -573,7 +573,7 @@ async def get_team_roster_c(request: web.Request) -> web.Response:
 
 
 @router.get("/teams/{id}/roster/all")
-async def get_team_roster_c(request: web.Request) -> web.Response:
+async def get_team_roster_all(request: web.Request) -> web.Response:
     team_id = request.match_info['id']
     db = request.config_dict['DB']
     team = await fetch_team_roster_all(db, team_id)
