@@ -325,14 +325,26 @@ async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
                     "event": await fetch_event(db, event),
                 }
             else:
+                try:
+                    if json.loads(row['splits'])[0] == 0.0:
+                        entry = {
+                            "swimmer": name,
+                            "time": "NT",
+                            "meet": {
+                                "name": ""
+                            }
+                        }
+                        entries[event] = entry
+                        continue
+                except IndexError:
+                    pass
                 entry = {
                     "swimmer": name,
                     "meet": await fetch_meet(db, row['meet']),
                     "event": await fetch_event(db, event),
                     "seed": row['seed'],
                     "time": row['time'],
-                    "splits": json.loads(row['splits'])
-            }
+                    "splits": json.loads(row['splits'])}
             pprint.pprint(entry)
             entries[event] = entry
     return entries
