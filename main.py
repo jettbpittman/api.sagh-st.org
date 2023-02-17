@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import json
+import pprint
 import random
 import os
 import re
@@ -304,10 +305,12 @@ async def fetch_swimmer_entries(db: aiosqlite.Connection, id: int):
 async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
     s = await fetch_swimmer_lite(db, id)
     name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+    print(name)
     g = s['gender'].upper()
     entries = {}
     events = [f"{g}200F", f"{g}200M", f"{g}50F", f"{g}100L", f"{g}100F", f"{g}500F", f"{g}100B", f"{g}100S"]
     for event in events:
+        print(event)
         async with db.execute(
                 "SELECT * FROM entries WHERE swimmer = ? AND time = ( SELECT MIN(time) FROM entries WHERE event = ? AND swimmer = ? )", [id, event, id]
         ) as cursor:
@@ -330,6 +333,7 @@ async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
                     "time": row['time'],
                     "splits": json.loads(row['splits'])
             }
+            pprint.pprint(entry)
             entries[event] = entry
     return entries
 
