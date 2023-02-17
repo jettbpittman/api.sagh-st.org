@@ -314,7 +314,7 @@ async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
             if row is None:
                 entry = {
                     "swimmer": name,
-                    "time": "NO TIME",
+                    "time": "NT",
                     "meet": {
                         "name": ""
                     },
@@ -330,7 +330,7 @@ async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
                     "splits": json.loads(row['splits'])
             }
             entries[event] = entry
-    return entries
+    return sorted(entries, key=lambda d: d['name'])
 
 
 async def fetch_swimmer_entries_event(db: aiosqlite.Connection, id: int, event: str):
