@@ -4,6 +4,7 @@ import json
 import random
 import os
 import re
+import operator
 from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable
 from enum import Enum
@@ -226,7 +227,7 @@ async def fetch_team_roster(db: aiosqlite.Connection, id: int):
         for swimmer in rows:
             s = await fetch_swimmer_lite(db, swimmer['id'])
             roster.append(s)
-        return roster
+        return sorted(roster, key=lambda d: d['last_name'])
 
 
 async def fetch_team_roster_all(db: aiosqlite.Connection, id: int):
@@ -238,7 +239,7 @@ async def fetch_team_roster_all(db: aiosqlite.Connection, id: int):
         for swimmer in rows:
             s = await fetch_swimmer_lite(db, swimmer['id'])
             roster.append(s)
-        return roster
+        return sorted(roster, key=lambda d: d['last_name'])
 
 
 async def fetch_team(db: aiosqlite.Connection, id: int):
@@ -330,7 +331,7 @@ async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
                     "splits": json.loads(row['splits'])
             }
             entries[event] = entry
-    return sorted(entries, key=lambda d: d['name'])
+    return entries
 
 
 async def fetch_swimmer_entries_event(db: aiosqlite.Connection, id: int, event: str):
