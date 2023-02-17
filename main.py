@@ -315,6 +315,9 @@ async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
                 entry = {
                     "swimmer": name,
                     "time": "NO TIME",
+                    "meet": {
+                        "name": ""
+                    },
                     "event": await fetch_event(db, event),
                 }
             else:
