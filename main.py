@@ -462,6 +462,7 @@ async def create_swimmer(request: web.Request) -> web.Response:
     age = info['age']
     year = info['class']
     team = info['team']
+    gender = info['gender']
     if "join_date" in info:
         join_date = info['join_date']
         id = generate_id(1, year, join_date)
@@ -473,9 +474,9 @@ async def create_swimmer(request: web.Request) -> web.Response:
         active = True
     db = request.config_dict['DB']
     await db.execute(
-        "INSERT INTO swimmers (id, first_name, last_name, middle_name, age, class, team, active) VALUES(?, ?, ?, ?, "
+        "INSERT INTO swimmers (id, first_name, last_name, middle_name, age, class, team, active, gender) VALUES(?, ?, ?, ?, "
         "?, ?, ?, ?)",
-        [id, first_name, last_name, middle_name, age, year, team, active]
+        [id, first_name, last_name, middle_name, age, year, team, active, gender]
     )
     await db.commit()
     return web.json_response(
