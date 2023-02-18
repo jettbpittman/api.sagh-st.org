@@ -493,6 +493,21 @@ async def create_swimmer(request: web.Request) -> web.Response:
     )
 
 
+@router.get("/info")
+async def db_info(request: web.Request) -> web.Response:
+    db = request.config_dict['DB']
+    entries: aiosqlite.Cursor = await db.execute("SELECT count(*) from entries")
+    meets = await db.execute("SELECT count(*) from meets")
+    athletes = await db.execute("SELECT count(*) from swimmers")
+    response = {
+        "status": "online",
+        "entries": (await entries.fetchone())[0],
+        "meets": (await meets.fetchone())[0],
+        "athletes": (await athletes.fetchone())[0]
+    }
+    return web.json_response(response)
+
+
 @router.get("/swimmers/{id}")
 async def get_swimmers(request: web.Request) -> web.Response:
     swimmer_id = request.match_info['id']
