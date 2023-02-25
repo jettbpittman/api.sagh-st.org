@@ -187,26 +187,34 @@ async def fetch_event_top_five(db: aiosqlite.Connection, id: str):
         return top5[:5]
 
 
-async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet: int):
+async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
     async with db.execute(
-            "SELECT * FROM entries WHERE meet = ? AND swimmer = (SELECT id from swimmers where TEAM = ?)", [meet, team]
+            "SELECT id FROM swimmers WHERE team = ?", [str(team)]
     ) as cursor:
         rows = await cursor.fetchall()
-        if not rows:
-            raise NotFoundException(f"There are no entries into Meet {meet} from {team} does not exist!")
         entries = []
         m = await fetch_meet(db, meet)
-        for entry in rows:
-            s = await fetch_swimmer(db, entry['swimmer'])
-            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}"
-            e = {
-                "swimmer": name,
-                "swim_id": s['id'],
-                "meet": m['designator'],
-                "season": m['season'],
-                "time": str(entry['time'])
-            }
-            entries.append(e)
+        print(type(meet))
+        meet = int(meet)
+        print(type(meet))
+        for swimmer in rows:
+            async with db.execute(
+                "SELECT * FROM entries WHERE meet = ? AND swimmer = ?", [int(meet), int(swimmer['id'])]
+            ) as cursor2:
+                rows2 = await cursor2.fetchall()
+                for entry in rows2:
+                    pprint.pprint(entry)
+                    s = await fetch_swimmer(db, entry['swimmer'])
+                    name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}"
+                    e = {
+                        "swimmer": name,
+                        "event": await fetch_event(db, entry['event']),
+                        "swim_id": s['id'],
+                        "meet": m['designator'],
+                        "season": m['season'],
+                        "time": str(entry['time'])
+                    }
+                    entries.append(e)
         entries.sort(key=top5Sort)
         return entries
 
