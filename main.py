@@ -403,8 +403,28 @@ async def fetch_meet(db: aiosqlite.Connection, id: int):
             "venue": row['venue'],
             "designator": row['designator'],
             "date": row['date'],
-            "season": row['season']
+            "season": row['season'],
+            "most_recent": row['most_recent']
         }
+
+
+async def fetch_latest_meet(db: aiosqlite.Connection):
+    async with db.execute(
+            "SELECT * FROM meets WHERE most_recent = 1"
+    ) as cursor:
+        row = await cursor.fetchone()
+        if not row:
+            raise NotFoundException(f"No recent meet!!")
+        return {
+            "id": row['id'],
+            "name": row['name'],
+            "venue": row['venue'],
+            "designator": row['designator'],
+            "date": row['date'],
+            "season": row['season'],
+            "most_recent": row['most_recent']
+        }
+
 
 
 def handle_json_error(
@@ -606,11 +626,16 @@ async def create_meet(request: web.Request) -> web.Response:
     designator = info['designator']
     date = info['date']
     season = info['season']
+    latest = info['most_recent']
     id = generate_id(2)
     db = request.config_dict['DB']
+    if latest == 1:
+        await db.execute(
+            "UPDATE meets SET most_recent = 0 WHERE most_recent = 1"
+        )
     await db.execute(
-        "INSERT INTO meets (id, name, venue, designator, date, season) VALUES(?, ?, ?, ?, ?, ?)",
-        [id, name, venue, designator, date, season]
+        "INSERT INTO meets (id, name, venue, designator, date, season, most_recent) VALUES(?, ?, ?, ?, ?, ?, ?)",
+        [id, name, venue, designator, date, season, latest]
     )
     await db.commit()
     return web.json_response(
@@ -620,13 +645,22 @@ async def create_meet(request: web.Request) -> web.Response:
             "venue": venue,
             "designator": designator,
             "date": date,
-            "season": season
+            "season": season,
+            "most_recent": latest
         }
     )
 
 
 @router.get("/meets/{id}")
-async def get_team(request: web.Request) -> web.Response:
+async def get_meet(request: web.Request) -> web.Response:
+    meet_id = request.match_info['id']
+    db = request.config_dict['DB']
+    meet = await fetch_latest_meet(db)
+    return web.json_response(meet)
+
+
+@router.get("/meets/latest")
+async def get_latest_meet(request: web.Request) -> web.Response:
     meet_id = request.match_info['id']
     db = request.config_dict['DB']
     meet = await fetch_meet(db, meet_id)
