@@ -194,9 +194,6 @@ async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
         rows = await cursor.fetchall()
         entries = []
         m = await fetch_meet(db, meet)
-        print(type(meet))
-        meet = int(meet)
-        print(type(meet))
         for swimmer in rows:
             async with db.execute(
                 "SELECT * FROM entries WHERE meet = ? AND swimmer = ?", [int(meet), int(swimmer['id'])]
