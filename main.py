@@ -686,7 +686,7 @@ async def create_meet(request: web.Request) -> web.Response:
 async def get_meet(request: web.Request) -> web.Response:
     meet_id = request.match_info['id']
     db = request.config_dict['DB']
-    meet = await fetch_latest_meet(db)
+    meet = await fetch_meet(db, meet_id)
     return web.json_response(meet)
 
 
@@ -699,9 +699,8 @@ async def get_all_meets(request: web.Request) -> web.Response:
 
 @router.get("/latest/meet")
 async def get_latest_meet(request: web.Request) -> web.Response:
-    meet_id = request.match_info['id']
     db = request.config_dict['DB']
-    meet = await fetch_meet(db, meet_id)
+    meet = await fetch_latest_meet(db)
     return web.json_response(meet)
 
 
