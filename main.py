@@ -187,18 +187,18 @@ async def fetch_event_top_five(db: aiosqlite.Connection, id: str):
         return top5[:5]
 
 
-async def fetch_entries_by_team(db: aiosqlite.Connection, id: int):
+async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet: int):
     async with db.execute(
-            "SELECT * FROM entries WHERE team = ?", [id]
+            "SELECT * FROM entries WHERE meet = ? AND swimmer = (SELECT id from swimmers where TEAM = ?)", [meet, team]
     ) as cursor:
         rows = await cursor.fetchall()
         if not rows:
-            raise NotFoundException(f"Event {id} does not exist!")
+            raise NotFoundException(f"There are no entries into Meet {meet} from {team} does not exist!")
         entries = []
+        m = await fetch_meet(db, meet)
         for entry in rows:
             s = await fetch_swimmer(db, entry['swimmer'])
             name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}"
-            m = await fetch_meet(db, entry['meet'])
             e = {
                 "swimmer": name,
                 "swim_id": s['id'],
@@ -208,15 +208,7 @@ async def fetch_entries_by_team(db: aiosqlite.Connection, id: int):
             }
             entries.append(e)
         entries.sort(key=top5Sort)
-        swimmers = []
-        top5 = []
-        for entry in entries:
-            if entry['swim_id'] in swimmers:
-                continue
-            else:
-                swimmers.append(entry['swim_id'])
-                top5.append(entry)
-        return top5[:5]
+        return entries
 
 
 async def fetch_team_roster(db: aiosqlite.Connection, id: int):
