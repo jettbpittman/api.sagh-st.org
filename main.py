@@ -33,6 +33,10 @@ def top5Sort(e):
         return e['time']
 
 
+def sortbyTime(e):
+    return e['time']
+
+
 def get_event_name(e):
     if e[-1] == "F":
         return f"{e[:-1]} Freestyle"
@@ -215,6 +219,8 @@ async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
                         entries[entry['event']].append(e)
                     except KeyError:
                         entries[entry['event']] = [e]
+        for event in entries:
+            entries[event].sort(key=sortbyTime)
         keys = list(entries.keys())
         keys.sort()
         sorted_entries = {i: entries[i] for i in keys}
