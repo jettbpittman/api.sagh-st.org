@@ -691,13 +691,13 @@ async def get_meet(request: web.Request) -> web.Response:
 
 
 @router.get("/meets")
-async def get_all_meet(request: web.Request) -> web.Response:
+async def get_all_meets(request: web.Request) -> web.Response:
     db = request.config_dict['DB']
     meets = await fetch_all_meets(db)
     return web.json_response(meets)
 
 
-@router.get("/meets/latest")
+@router.get("/latest/meet")
 async def get_latest_meet(request: web.Request) -> web.Response:
     meet_id = request.match_info['id']
     db = request.config_dict['DB']
