@@ -205,6 +205,7 @@ async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
                     e = {
                         "swimmer": name,
                         "swim_id": s['id'],
+                        "event": await fetch_event(db, entry['event']),
                         "meet": m['designator'],
                         "seed": entry['seed'],
                         "season": m['season'],
