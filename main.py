@@ -416,6 +416,30 @@ async def fetch_meet(db: aiosqlite.Connection, id: int):
         }
 
 
+async def fetch_all_meets(db: aiosqlite.Connection):
+    async with db.execute(
+            "SELECT * FROM meets"
+    ) as cursor:
+        rows = await cursor.fetchall()
+        if not rows:
+            raise NotFoundException(f"Unexpected error!")
+        meets = []
+        for row in rows:
+            meets.append(
+                {
+                    "season": row['season'],
+                    "id": row['id'],
+                    "name": row['name'],
+                    "venue": row['venue'],
+                    "designator": row['designator'],
+                    "date": row['date'],
+                    "most_recent": row['most_recent']
+                }
+            )
+        meets.sort(key=lambda d: d['season'], reverse=True)
+        return meets
+
+
 async def fetch_latest_meet(db: aiosqlite.Connection):
     async with db.execute(
             "SELECT * FROM meets WHERE most_recent = 1"
@@ -432,7 +456,6 @@ async def fetch_latest_meet(db: aiosqlite.Connection):
             "season": row['season'],
             "most_recent": row['most_recent']
         }
-
 
 
 def handle_json_error(
@@ -667,6 +690,13 @@ async def get_meet(request: web.Request) -> web.Response:
     return web.json_response(meet)
 
 
+@router.get("/meets")
+async def get_all_meet(request: web.Request) -> web.Response:
+    db = request.config_dict['DB']
+    meets = await fetch_all_meets(db)
+    return web.json_response(meets)
+
+
 @router.get("/meets/latest")
 async def get_latest_meet(request: web.Request) -> web.Response:
     meet_id = request.match_info['id']
@@ -676,7 +706,7 @@ async def get_latest_meet(request: web.Request) -> web.Response:
 
 
 @router.get("/meets/{meet}/entries/{team}")
-async def get_latest_meet(request: web.Request) -> web.Response:
+async def get_meet_entries_by_team(request: web.Request) -> web.Response:
     meet_id = request.match_info['meet']
     team_id = request.match_info['team']
     db = request.config_dict['DB']
