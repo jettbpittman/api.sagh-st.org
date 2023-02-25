@@ -189,10 +189,10 @@ async def fetch_event_top_five(db: aiosqlite.Connection, id: str):
 
 async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
     async with db.execute(
-            "SELECT id FROM swimmers WHERE team = ?", [str(team)]
+            "SELECT id FROM swimmers WHERE team = ? ORDER BY last_name", [str(team)]
     ) as cursor:
         rows = await cursor.fetchall()
-        entries = []
+        entries = {}
         m = await fetch_meet(db, meet)
         for swimmer in rows:
             async with db.execute(
@@ -200,20 +200,24 @@ async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
             ) as cursor2:
                 rows2 = await cursor2.fetchall()
                 for entry in rows2:
-                    pprint.pprint(entry)
                     s = await fetch_swimmer(db, entry['swimmer'])
                     name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}"
                     e = {
                         "swimmer": name,
-                        "event": await fetch_event(db, entry['event']),
                         "swim_id": s['id'],
                         "meet": m['designator'],
+                        "seed": entry['seed'],
                         "season": m['season'],
                         "time": str(entry['time'])
                     }
-                    entries.append(e)
-        entries.sort(key=top5Sort)
-        return entries
+                    try:
+                        entries[entry['event']].append(e)
+                    except KeyError:
+                        entries[entry['event']] = [e]
+        keys = list(entries.keys())
+        keys.sort()
+        sorted_entries = {i: entries[i] for i in keys}
+        return sorted_entries
 
 
 async def fetch_team_roster(db: aiosqlite.Connection, id: int):
