@@ -659,6 +659,15 @@ async def get_latest_meet(request: web.Request) -> web.Response:
     return web.json_response(meet)
 
 
+@router.get("/meets/{meet}/entries/{team}")
+async def get_latest_meet(request: web.Request) -> web.Response:
+    meet_id = request.match_info['meet']
+    team_id = request.match_info['team']
+    db = request.config_dict['DB']
+    meet = await fetch_entries_by_team(db, meet=meet_id, team=team_id)
+    return web.json_response(meet)
+
+
 # Entry Queries
 @router.post("/entries")
 @auth_required
