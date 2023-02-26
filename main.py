@@ -34,7 +34,11 @@ def top5Sort(e):
 
 
 def sortbyTime(e):
-    return e['time']
+    if len(e['time']) <= 5:
+        adjusted_t = f"0:{e['time']}"
+        return adjusted_t
+    else:
+        return e['time']
 
 
 def get_event_name(e):
