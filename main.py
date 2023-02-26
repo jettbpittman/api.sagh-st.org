@@ -83,6 +83,27 @@ class Events(Enum):
     FOUR_FREE_R = "400 Freestyle Relay"
 
 
+async def fetch_standard(db: aiosqlite.Connection, code):
+    async with db.execute(
+            "SELECT * FROM standards WHERE code = ?", [code]
+    ) as cursor:
+        row = await cursor.fetchone()
+        if not row:
+            raise NotFoundException(f"Standard {code} does not exist!")
+        return {
+            "code": row['code'],
+            "name": row['name'],
+            "authority": row['authority'],
+            "min_time": row['min_time'],
+            "year": row['year'],
+            "event": row['event'],
+            "age": row['age'],
+            "gender": row['gender'],
+            "short_name": row['short_name'],
+            "course": row['course']
+        }
+
+
 async def fetch_entry(db: aiosqlite.Connection, id: int):
     async with db.execute(
             "SELECT * FROM entries WHERE id = ?", [id]
@@ -98,7 +119,7 @@ async def fetch_entry(db: aiosqlite.Connection, id: int):
             "seed": row['seed'],
             "time": row['time'],
             "splits": json.loads(row['splits']),
-            "standards": row['standards']
+            "standards": await fetch_standard(db, row['standards'])
         }
 
 
@@ -116,7 +137,7 @@ async def fetch_entry_lite(db: aiosqlite.Connection, id: int):
             "seed": row['seed'],
             "time": row['time'],
             "splits": json.loads(row['splits']),
-            "standards": row['standards']
+            "standards": await fetch_standard(db, row['standards'])
         }
 
 
@@ -151,7 +172,7 @@ async def fetch_event_all_entries(db: aiosqlite.Connection, id: int):
                 "seed": entry['seed'],
                 "time": entry['time'],
                 "splits": json.loads(entry['splits']),
-                "standards": entry['standards']
+                "standards": await fetch_standard(db, entry['standards'])
             }
             entries.append(e)
         return entries
@@ -180,7 +201,7 @@ async def fetch_event_top_five(db: aiosqlite.Connection, id: str):
                 "meet": m['designator'],
                 "season": m['season'],
                 "time": str(entry['time']),
-                "standards": entry['standards']
+                "standards": await fetch_standard(db, entry['standards'])
             }
             entries.append(e)
         entries.sort(key=top5Sort)
@@ -218,7 +239,7 @@ async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
                         "seed": entry['seed'],
                         "season": m['season'],
                         "time": str(entry['time']),
-                        "standards": entry['standards']
+                        "standards": await fetch_standard(db, entry['standards'])
                     }
                     try:
                         entries[entry['event']].append(e)
@@ -311,7 +332,7 @@ async def fetch_swimmer_entries(db: aiosqlite.Connection, id: int):
                 "seed": entry['seed'],
                 "time": entry['time'],
                 "splits": json.loads(entry['splits']),
-                "standards": entry['standards']
+                "standards": await fetch_standard(db, entry['standards'])
             })
         return entries
 
@@ -359,7 +380,7 @@ async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
             "seed": fastest['seed'],
             "time": fastest['time'],
             "splits": fastest['splits'],
-            "standards": fastest['standards']
+            "standards": await fetch_standard(db, fastest['standards'])
             }
         events_list[event] = entry
     return events_list
@@ -383,7 +404,7 @@ async def fetch_swimmer_entries_event(db: aiosqlite.Connection, id: int, event: 
                 "seed": entry['seed'],
                 "time": entry['time'],
                 "splits": json.loads(entry['splits']),
-                "standards": entry['standards']
+                "standards": await fetch_standard(db, entry['standards'])
             })
         return entries
 
