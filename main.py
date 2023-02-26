@@ -85,7 +85,7 @@ class Events(Enum):
 
 async def fetch_standard(db: aiosqlite.Connection, code):
     async with db.execute(
-            "SELECT * FROM standards WHERE code = ?", [code]
+            "SELECT * FROM standards WHERE code = ?", [str(code)]
     ) as cursor:
         row = await cursor.fetchone()
         if not row:
