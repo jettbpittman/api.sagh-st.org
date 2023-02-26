@@ -231,11 +231,13 @@ async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
         entries = {}
         m = await fetch_meet(db, meet)
         for swimmer in rows:
+            print(dict(swimmer))
             async with db.execute(
                 "SELECT * FROM entries WHERE meet = ? AND swimmer = ?", [int(meet), int(swimmer['id'])]
             ) as cursor2:
                 rows2 = await cursor2.fetchall()
                 for entry in rows2:
+                    print(dict(entry))
                     s = await fetch_swimmer(db, entry['swimmer'])
                     name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}"
                     e = {
