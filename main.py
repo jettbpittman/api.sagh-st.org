@@ -89,7 +89,7 @@ async def fetch_standard(db: aiosqlite.Connection, code):
     ) as cursor:
         row = await cursor.fetchone()
         if not row:
-            raise NotFoundException(f"Standard {code} does not exist!")
+            return None
         return {
             "code": row['code'],
             "name": row['name'],
@@ -97,7 +97,6 @@ async def fetch_standard(db: aiosqlite.Connection, code):
             "min_time": row['min_time'],
             "year": row['year'],
             "event": row['event'],
-            "age": row['age'],
             "gender": row['gender'],
             "short_name": row['short_name'],
             "course": row['course']
