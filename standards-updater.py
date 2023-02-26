@@ -3,7 +3,6 @@ import sqlite3
 standards = [
     "USAS-BB",
     "USAS-A",
-    "USAS-AA",
     "USAS-SS"
 ]
 
