@@ -97,7 +97,8 @@ async def fetch_entry(db: aiosqlite.Connection, id: int):
             "event": await fetch_event(db, row['event']),
             "seed": row['seed'],
             "time": row['time'],
-            "splits": json.loads(row['splits'])
+            "splits": json.loads(row['splits']),
+            "standards": row['standards']
         }
 
 
@@ -114,7 +115,8 @@ async def fetch_entry_lite(db: aiosqlite.Connection, id: int):
             "event": await fetch_event(db, row['event']),
             "seed": row['seed'],
             "time": row['time'],
-            "splits": json.loads(row['splits'])
+            "splits": json.loads(row['splits']),
+            "standards": row['standards']
         }
 
 
@@ -148,7 +150,8 @@ async def fetch_event_all_entries(db: aiosqlite.Connection, id: int):
                 "meet": await fetch_meet(db, entry['meet']),
                 "seed": entry['seed'],
                 "time": entry['time'],
-                "splits": json.loads(entry['splits'])
+                "splits": json.loads(entry['splits']),
+                "standards": entry['standards']
             }
             entries.append(e)
         return entries
@@ -176,7 +179,8 @@ async def fetch_event_top_five(db: aiosqlite.Connection, id: str):
                 "swim_id": s['id'],
                 "meet": m['designator'],
                 "season": m['season'],
-                "time": str(entry['time'])
+                "time": str(entry['time']),
+                "standards": entry['standards']
             }
             entries.append(e)
         entries.sort(key=top5Sort)
@@ -213,7 +217,8 @@ async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
                         "meet": m['designator'],
                         "seed": entry['seed'],
                         "season": m['season'],
-                        "time": str(entry['time'])
+                        "time": str(entry['time']),
+                        "standards": entry['standards']
                     }
                     try:
                         entries[entry['event']].append(e)
@@ -305,7 +310,8 @@ async def fetch_swimmer_entries(db: aiosqlite.Connection, id: int):
                 "event": await fetch_event(db, entry['event']),
                 "seed": entry['seed'],
                 "time": entry['time'],
-                "splits": json.loads(entry['splits'])
+                "splits": json.loads(entry['splits']),
+                "standards": entry['standards']
             })
         return entries
 
@@ -352,7 +358,9 @@ async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
             "event": fastest['event'],
             "seed": fastest['seed'],
             "time": fastest['time'],
-            "splits": fastest['splits']}
+            "splits": fastest['splits'],
+            "standards": fastest['standards']
+            }
         events_list[event] = entry
     return events_list
 
@@ -374,7 +382,8 @@ async def fetch_swimmer_entries_event(db: aiosqlite.Connection, id: int, event: 
                 "event": await fetch_event(db, entry['event']),
                 "seed": entry['seed'],
                 "time": entry['time'],
-                "splits": json.loads(entry['splits'])
+                "splits": json.loads(entry['splits']),
+                "standards": entry['standards']
             })
         return entries
 
