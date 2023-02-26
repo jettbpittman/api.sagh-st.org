@@ -2,7 +2,8 @@ import sqlite3
 
 standards = [
     "USAS-BB",
-    "USAS-A"
+    "USAS-A",
+    "USAS-SS"
 ]
 
 events = [
