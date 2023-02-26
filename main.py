@@ -84,7 +84,6 @@ class Events(Enum):
 
 
 async def fetch_standard(db: aiosqlite.Connection, code):
-    print(code)
     if type(code) == dict:
         code = code['code']
     if code is None:
