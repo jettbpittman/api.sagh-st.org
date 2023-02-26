@@ -84,12 +84,17 @@ class Events(Enum):
 
 
 async def fetch_standard(db: aiosqlite.Connection, code):
+    print(code)
+    if type(code) == dict:
+        code = code['code']
+    if code is None:
+        return None
     async with db.execute(
-            "SELECT * FROM standards WHERE code = ?", [str(code)]
+            "SELECT * FROM standards WHERE code = ?", [code]
     ) as cursor:
         row = await cursor.fetchone()
         if not row:
-            return None
+            raise NotFoundException(f"Standard {code} does not exist!")
         return {
             "code": row['code'],
             "name": row['name'],
