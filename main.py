@@ -540,6 +540,13 @@ def auth_required(
     return handler
 
 
+@router.post("/auth/check")
+@handle_json_error
+@auth_required
+async def auth_check(request: web.Request) -> web.Response:
+    return web.json_response({"status": "ok"})
+
+
 # Swimmer Queries
 @router.post("/swimmers")
 @handle_json_error
