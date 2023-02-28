@@ -326,24 +326,34 @@ async def fetch_swimmer(db: aiosqlite.Connection, id: int):
 
 async def fetch_swimmer_entries(db: aiosqlite.Connection, id: int):
     async with db.execute(
-            "SELECT * FROM entries WHERE swimmer = ?", [id]
+            "SELECT event FROM entries WHERE swimmer = ?", [id]
     ) as cursor:
         rows = await cursor.fetchall()
         if not rows:
             raise NotFoundException(f"Swimmer {id} does not exist!")
         entries = []
-        for entry in rows:
-            s = await fetch_swimmer(db, entry['swimmer'])
-            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
-            entries.append({
-                "swimmer": name,
-                "meet": await fetch_meet(db, entry['meet']),
-                "event": await fetch_event(db, entry['event']),
-                "seed": entry['seed'],
-                "time": entry['time'],
-                "splits": json.loads(entry['splits']),
-                "standards": await fetch_standard(db, entry['standards'])
-            })
+        for event in rows:
+            event = event['event']
+            async with db.execute(
+                    "SELECT * FROM entries WHERE swimmer = ? AND event = ?", [id, event]
+            ) as c:
+                rows1 = await c.fetchall()
+                ev = await fetch_event(db, event)
+                obj = ev
+                obj["entries"] = []
+                for entry in rows1:
+                    s = await fetch_swimmer(db, entry['swimmer'])
+                    name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+                    obj['entries'].append({
+                        "swimmer": name,
+                        "meet": await fetch_meet(db, entry['meet']),
+                        "event": await fetch_event(db, entry['event']),
+                        "seed": entry['seed'],
+                        "time": entry['time'],
+                        "splits": json.loads(entry['splits']),
+                        "standards": await fetch_standard(db, entry['standards'])
+                    })
+                entries.append(obj)
         return entries
 
 
@@ -937,7 +947,6 @@ async def init_app() -> web.Application:
     for route in list(app.router.routes()):
         print(route)
         cors.add(route)
-    print(cors)
     app.cleanup_ctx.append(init_db)
     return app
 
