@@ -13,6 +13,7 @@ from tabulate import tabulate
 
 import aiosqlite
 from aiohttp import web
+import aiohttp_cors
 
 router = web.RouteTableDef()
 
@@ -892,6 +893,18 @@ async def init_db(app: web.Application) -> AsyncIterator[None]:
 async def init_app() -> web.Application:
     app = web.Application()
     app.add_routes(router)
+    # Configure default CORS settings.
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+        )
+    })
+
+    # Configure CORS on all routes.
+    for route in list(app.router.routes()):
+        cors.add(route)
     app.cleanup_ctx.append(init_db)
     return app
 
@@ -903,5 +916,6 @@ def try_make_db() -> None:
 
 
 try_make_db()
+
 
 web.run_app(init_app())
