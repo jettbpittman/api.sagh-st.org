@@ -332,15 +332,20 @@ async def fetch_swimmer_entries(db: aiosqlite.Connection, id: int):
         if not rows:
             raise NotFoundException(f"Swimmer {id} does not exist!")
         entries = []
+        events = []
         for event in rows:
             event = event['event']
+            if event in events:
+                continue
+            events.append(event)
+            print(event)
+            ev = await fetch_event(db, event)
+            obj = ev
+            obj["entries"] = []
             async with db.execute(
                     "SELECT * FROM entries WHERE swimmer = ? AND event = ?", [id, event]
             ) as c:
                 rows1 = await c.fetchall()
-                ev = await fetch_event(db, event)
-                obj = ev
-                obj["entries"] = []
                 for entry in rows1:
                     s = await fetch_swimmer(db, entry['swimmer'])
                     name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
