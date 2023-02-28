@@ -480,6 +480,29 @@ async def fetch_all_meets(db: aiosqlite.Connection):
         return meets
 
 
+async def fetch_meets_by_season(db: aiosqlite.Connection, season: int):
+    async with db.execute(
+            "SELECT * FROM meets WHERE season = ?", [season]
+    ) as cursor:
+        rows = await cursor.fetchall()
+        if not rows:
+            raise NotFoundException(f"No meets in season {season}")
+        meets = []
+        for row in rows:
+            meets.append(
+                {
+                    "season": row['season'],
+                    "id": row['id'],
+                    "name": row['name'],
+                    "venue": row['venue'],
+                    "designator": row['designator'],
+                    "date": row['date'],
+                    "most_recent": row['most_recent']
+                }
+            )
+        return meets
+
+
 async def fetch_latest_meet(db: aiosqlite.Connection):
     async with db.execute(
             "SELECT * FROM meets WHERE most_recent = 1"
@@ -741,6 +764,14 @@ async def get_meet(request: web.Request) -> web.Response:
 async def get_all_meets(request: web.Request) -> web.Response:
     db = request.config_dict['DB']
     meets = await fetch_all_meets(db)
+    return web.json_response(meets)
+
+
+@router.get("/season/{code}/meets")
+async def get_season_meets(request: web.Request) -> web.Response:
+    db = request.config_dict['DB']
+    season = request.match_info['code']
+    meets = await fetch_meets_by_season(db, season)
     return web.json_response(meets)
 
 
