@@ -895,7 +895,7 @@ async def init_app() -> web.Application:
     app.add_routes(router)
     # Configure default CORS settings.
     cors = aiohttp_cors.setup(app, defaults={
-        "https://www.sagh-st.org": aiohttp_cors.ResourceOptions(
+        "*": aiohttp_cors.ResourceOptions(
             allow_credentials=True,
             expose_headers="*",
             allow_headers="*",
@@ -904,7 +904,9 @@ async def init_app() -> web.Application:
 
     # Configure CORS on all routes.
     for route in list(app.router.routes()):
+        print(route)
         cors.add(route)
+    print(cors)
     app.cleanup_ctx.append(init_db)
     return app
 
