@@ -338,7 +338,6 @@ async def fetch_swimmer_entries(db: aiosqlite.Connection, id: int):
             if event in events:
                 continue
             events.append(event)
-            print(event)
             ev = await fetch_event(db, event)
             obj = ev
             obj["entries"] = []
@@ -358,6 +357,7 @@ async def fetch_swimmer_entries(db: aiosqlite.Connection, id: int):
                         "splits": json.loads(entry['splits']),
                         "standards": await fetch_standard(db, entry['standards'])
                     })
+                obj['entries'].sort(key=sortbyTime)
                 entries.append(obj)
         return entries
 
