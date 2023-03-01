@@ -571,11 +571,11 @@ def auth_required(
         for user in creds:
             if user['username'] == username and user['password'] == password:
                 return await func(request)
-            else:
-                return web.json_response({
-                    "status": "forbidden", "reason": "you are not allowed to access this endpoint!"
-                }, status=403
-                )
+
+        return web.json_response({
+            "status": "forbidden", "reason": "you are not allowed to access this endpoint!"
+        }, status=403
+        )
     return handler
 
 
