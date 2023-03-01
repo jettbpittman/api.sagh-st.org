@@ -232,13 +232,11 @@ async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
         entries = {}
         m = await fetch_meet(db, meet)
         for swimmer in rows:
-            print(dict(swimmer))
             async with db.execute(
                 "SELECT * FROM entries WHERE meet = ? AND swimmer = ?", [int(meet), int(swimmer['id'])]
             ) as cursor2:
                 rows2 = await cursor2.fetchall()
                 for entry in rows2:
-                    print(dict(entry))
                     s = await fetch_swimmer(db, entry['swimmer'])
                     name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}"
                     e = {
@@ -261,6 +259,44 @@ async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
         keys.sort()
         sorted_entries = {i: entries[i] for i in keys}
         return sorted_entries
+
+
+async def fetch_entries_by_meet(db: aiosqlite.Connection, id: int):
+    async with db.execute(
+            "SELECT event FROM entries WHERE meet = ?", [id]
+    ) as cursor:
+        rows = await cursor.fetchall()
+        if not rows:
+            raise NotFoundException(f"Meet {id} does not exist!")
+        entries = []
+        events = []
+        for event in rows:
+            event = event['event']
+            if event in events:
+                continue
+            events.append(event)
+            ev = await fetch_event(db, event)
+            obj = ev
+            obj["entries"] = []
+            async with db.execute(
+                    "SELECT * FROM entries WHERE meet = ? AND event = ?", [id, event]
+            ) as c:
+                rows1 = await c.fetchall()
+                for entry in rows1:
+                    s = await fetch_swimmer(db, entry['swimmer'])
+                    name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+                    obj['entries'].append({
+                        "swimmer": name,
+                        "meet": await fetch_meet(db, entry['meet']),
+                        "event": await fetch_event(db, entry['event']),
+                        "seed": entry['seed'],
+                        "time": entry['time'],
+                        "splits": json.loads(entry['splits']),
+                        "standards": await fetch_standard(db, entry['standards'])
+                    })
+                obj['entries'].sort(key=sortbyTime)
+                entries.append(obj)
+        return entries
 
 
 async def fetch_team_roster(db: aiosqlite.Connection, id: int):
@@ -772,6 +808,14 @@ async def get_meet(request: web.Request) -> web.Response:
     meet_id = request.match_info['id']
     db = request.config_dict['DB']
     meet = await fetch_meet(db, meet_id)
+    return web.json_response(meet)
+
+
+@router.get("/meets/{id}/entries")
+async def get_meet(request: web.Request) -> web.Response:
+    meet_id = request.match_info['id']
+    db = request.config_dict['DB']
+    meet = await fetch_entries_by_meet(db, meet_id)
     return web.json_response(meet)
 
 
