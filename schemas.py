@@ -6,6 +6,7 @@ class Meet:
     """
     Swim Meet
     """
+
     id: int
     designator: str
     name: str
@@ -17,6 +18,7 @@ class Swimmer:
     """
     Swimmer
     """
+
     first_name: str
     last_name: str
     middle_name: str
@@ -31,6 +33,7 @@ class Team:
     """
     Team
     """
+
     name: str
     id: int
     address: str
@@ -44,6 +47,7 @@ class Entry:
     """
     Meet Entry
     """
+
     swimmer: Swimmer
     event: Events
     seed: float
@@ -55,6 +59,7 @@ class Events(Enum):
     """
     List of Events and Codes
     """
+
     TWO_MEDLEY_R = "200 Medley Relay"
     TWO_FREE = "200 Freestyle"
     TWO_IM = "200 Individual Medley"
@@ -67,4 +72,3 @@ class Events(Enum):
     ONE_BACK = "100 Backstroke"
     ONE_BREAST = "100 Breaststroke"
     FOUR_FREE_R = "400 Freestyle Relay"
-
