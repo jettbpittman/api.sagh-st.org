@@ -32,7 +32,7 @@ def format_time(e):
 
 for event in events:
     for standard in standards:
-        con = sqlite3.connect("db.sqlite3")
+        con = sqlite3.connect("~/api.sagh-st.org/db.sqlite3")
 
         code = f"{standard}-{event}"
 
