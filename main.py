@@ -101,7 +101,7 @@ async def fetch_standard(db: asyncpg.Connection, code):
         code = code["code"]
     if code is None:
         return None
-    row = await db.fetchrow("SELECT * FROM standards WHERE code = $1", code)
+    row = await db.fetchrow("SELECT * FROM standards WHERE code = $1", str(code))
     if not row:
         raise NotFoundException(f"Standard {code} does not exist!")
     return {
@@ -118,7 +118,7 @@ async def fetch_standard(db: asyncpg.Connection, code):
 
 
 async def fetch_entry(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT * FROM entries WHERE id = $1", id)
+    row = await db.fetchrow("SELECT * FROM entries WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"Entry {id} does not exist!")
     return {
@@ -134,7 +134,7 @@ async def fetch_entry(db: asyncpg.Connection, id: int):
 
 
 async def fetch_entry_lite(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT * FROM entries WHERE id = $1", id)
+    row = await db.fetchrow("SELECT * FROM entries WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"Entry {id} does not exist!")
     return {
@@ -148,8 +148,8 @@ async def fetch_entry_lite(db: asyncpg.Connection, id: int):
     }
 
 
-async def fetch_event(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT * FROM events WHERE code = $1", id)
+async def fetch_event(db: asyncpg.Connection, id: str):
+    row = await db.fetchrow("SELECT * FROM events WHERE code = $1", str(id))
     if not row:
         raise NotFoundException(f"Event {id} does not exist!")
     return {
@@ -161,8 +161,8 @@ async def fetch_event(db: asyncpg.Connection, id: int):
     }
 
 
-async def fetch_event_all_entries(db: asyncpg.Connection, id: int):
-    rows = await db.fetch("SELECT * FROM entries WHERE event = $1", id)
+async def fetch_event_all_entries(db: asyncpg.Connection, id: str):
+    rows = await db.fetch("SELECT * FROM entries WHERE event = $1", str(id))
     if not rows:
         raise NotFoundException(f"Event {id} does not exist!")
     entries = []
@@ -180,7 +180,7 @@ async def fetch_event_all_entries(db: asyncpg.Connection, id: int):
 
 
 async def fetch_event_top_five(db: asyncpg.Connection, id: str):
-    rows = await db.fetch("SELECT * FROM entries WHERE event = $1", id)
+    rows = await db.fetch("SELECT * FROM entries WHERE event = $1", str(id))
     if not rows:
         raise NotFoundException(f"Event {id} does not exist!")
     entries = []
@@ -252,7 +252,7 @@ async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
 
 
 async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
-    rows = await db.fetch("SELECT event FROM entries WHERE meet = $1", id)
+    rows = await db.fetch("SELECT event FROM entries WHERE meet = $1", int(id))
     if not rows:
         raise NotFoundException(f"Meet {id} does not exist!")
     entries = []
@@ -266,7 +266,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
         obj = ev
         obj["entries"] = []
         rows1 = await db.fetch(
-            "SELECT * FROM entries WHERE meet = $1 AND event = $2", id, event
+            "SELECT * FROM entries WHERE meet = $1 AND event = $2", int(id), str(event)
         )
         for entry in rows1:
             s = await fetch_swimmer(db, entry["swimmer"])
@@ -287,8 +287,8 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
     return entries
 
 
-async def fetch_team_roster(db: asyncpg.Connection, id: int):
-    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1 AND active = 1", id)
+async def fetch_team_roster(db: asyncpg.Connection, id: str):
+    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1 AND active = 1", str(id))
     roster = []
     for swimmer in rows:
         s = await fetch_swimmer_lite(db, swimmer["id"])
@@ -296,8 +296,8 @@ async def fetch_team_roster(db: asyncpg.Connection, id: int):
     return sorted(roster, key=lambda d: d["last_name"])
 
 
-async def fetch_team_roster_all(db: asyncpg.Connection, id: int):
-    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1", id)
+async def fetch_team_roster_all(db: asyncpg.Connection, id: str):
+    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1", str(id))
     print(rows)
     roster = []
     for swimmer in rows:
@@ -307,8 +307,8 @@ async def fetch_team_roster_all(db: asyncpg.Connection, id: int):
     return sorted(roster, key=lambda d: d["last_name"])
 
 
-async def fetch_team(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT * FROM teams WHERE code = $1", id)
+async def fetch_team(db: asyncpg.Connection, id: str):
+    row = await db.fetchrow("SELECT * FROM teams WHERE code = $1", str(id))
     if not row:
         raise NotFoundException(f"Team {id} does not exist!")
     return {
@@ -322,7 +322,7 @@ async def fetch_team(db: asyncpg.Connection, id: int):
 
 
 async def fetch_swimmer(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", id)
+    row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"Swimmer {id} does not exist!")
     return {
@@ -353,7 +353,7 @@ async def fetch_swimmer_entries(db: asyncpg.Connection, id: int):
         obj = ev
         obj["entries"] = []
         rows1 = await db.fetch(
-            "SELECT * FROM entries WHERE swimmer = $1 AND event = $2", int(id), event
+            "SELECT * FROM entries WHERE swimmer = $1 AND event = $2", int(id), str(event)
         )
         for entry in rows1:
             s = await fetch_swimmer(db, entry["swimmer"])
@@ -430,7 +430,7 @@ async def fetch_swimmer_best_times(db: asyncpg.Connection, id: int):
 
 async def fetch_swimmer_entries_event(db: asyncpg.Connection, id: int, event: str):
     rows = await db.fetch(
-        "SELECT * FROM entries WHERE swimmer = $1 AND event = $2", id, event
+        "SELECT * FROM entries WHERE swimmer = $1 AND event = $2", int(id), str(event)
     )
     if not rows:
         return []
@@ -453,7 +453,7 @@ async def fetch_swimmer_entries_event(db: asyncpg.Connection, id: int, event: st
 
 
 async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", id)
+    row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"Swimmer {id} does not exist!")
     return {
@@ -469,7 +469,7 @@ async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
 
 
 async def fetch_meet(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT * FROM meets WHERE id = $1", id)
+    row = await db.fetchrow("SELECT * FROM meets WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"Meet {id} does not exist!")
     return {
@@ -505,7 +505,7 @@ async def fetch_all_meets(db: asyncpg.Connection):
 
 
 async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
-    rows = await db.fetch("SELECT * FROM meets WHERE season = $1", season)
+    rows = await db.fetch("SELECT * FROM meets WHERE season = $1", int(season))
     if not rows:
         raise NotFoundException(f"No meets in season {season}")
     meets = []
