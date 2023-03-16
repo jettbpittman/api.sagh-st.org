@@ -288,7 +288,9 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
 
 
 async def fetch_team_roster(db: asyncpg.Connection, id: str):
-    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1 AND active = true", str(id))
+    rows = await db.fetch(
+        "SELECT * FROM swimmers WHERE team = $1 AND active = true", str(id)
+    )
     roster = []
     for swimmer in rows:
         s = await fetch_swimmer_lite(db, swimmer["id"])
@@ -353,7 +355,9 @@ async def fetch_swimmer_entries(db: asyncpg.Connection, id: int):
         obj = ev
         obj["entries"] = []
         rows1 = await db.fetch(
-            "SELECT * FROM entries WHERE swimmer = $1 AND event = $2", int(id), str(event)
+            "SELECT * FROM entries WHERE swimmer = $1 AND event = $2",
+            int(id),
+            str(event),
         )
         for entry in rows1:
             s = await fetch_swimmer(db, entry["swimmer"])
@@ -560,42 +564,37 @@ def handle_json_error(
     return handler
 
 
-def auth_required(
-    func: Callable[[web.Request], Awaitable[web.Response]], permission: int = 0
-) -> Callable[[web.Request], Awaitable[web.Response]]:
-    async def handler(request: web.Request) -> web.Response:
-        try:
-            token = request.headers["token"]
-        except KeyError:
+async def auth_required(request: web.Request, permissions: int = 0):
+    try:
+        token = request.headers["token"]
+    except KeyError:
+        return web.json_response(
+            {
+                "status": "bad request",
+                "reason": "you have not passed proper authentication headers!",
+            },
+            status=400,
+        )
+    db = request.config_dict["DB"]
+    r = await db.fetchrow("SELECT user_id FROM auth_tokens WHERE token = $1", str(token))
+    if r is None:
+        return web.json_response(
+            {"status": "unauthorized", "reason": "mismatched token"}, status=401
+        )
+    else:
+        r2 = await db.fetchrow(
+            "SELECT permissions FROM users WHERE id = $1", int(r["user_id"])
+        )
+        if permissions <= r2["permissions"]:
+            return web.json_response({"status": "ok"})
+        else:
             return web.json_response(
                 {
-                    "status": "bad request",
-                    "reason": "you have not passed proper authentication headers!",
+                    "status": "forbidden",
+                    "reason": f"you do not have sufficient permissions to access this endpoint! level {permissions} required, you have {r2['permissions']}",
                 },
-                status=400,
+                status=403,
             )
-        db = request.config_dict["DB"]
-        r = await db.fetchrow("SELECT user_id FROM auth_tokens WHERE token = $1", token)
-        if r is None:
-            return web.json_response(
-                {"status": "unauthorized", "reason": "mismatched token"}, status=401
-            )
-        else:
-            r2 = await db.fetchrow(
-                "SELECT permissions FROM users WHERE id = $1", r["user_id"]
-            )
-            if permission <= r2["permissions"]:
-                return await func(request)
-            else:
-                return web.json_response(
-                    {
-                        "status": "forbidden",
-                        "reason": "you do not have sufficient permissions to access this endpoint!",
-                    },
-                    status=403,
-                )
-
-    return handler
 
 
 def strip_token(token: str):
@@ -606,8 +605,10 @@ def strip_token(token: str):
 
 
 @router.post("/auth/check")
-@auth_required
 async def auth_check(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=0)
+    if a.status != 200:
+        return a
     token = strip_token(request.headers["token"])
     db = request.config_dict["DB"]
     r = await db.fetchrow(
@@ -632,6 +633,9 @@ async def auth_check(request: web.Request) -> web.Response:
 @router.post("/users")
 @handle_json_error
 async def create_user(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=3)
+    if a.status != 200:
+        return a
     info = await request.json()
     name = info["name"]
     username = info["username"]
@@ -644,10 +648,9 @@ async def create_user(request: web.Request) -> web.Response:
     id = generate_id(5)
     db = request.config_dict["DB"]
     await db.execute(
-        "INSERT INTO users (id, name, password, email, permissions, username) VALUES (?, ?, ?, ?, ?, ?)",
-        [id, name, password, email, permissions, username],
+        "INSERT INTO users (id, name, password, email, permissions, username) VALUES ($1, $2, $3, $4, $5, $6)",
+        id, name, password, email, permissions, username,
     )
-    await db.commit()
     return web.json_response(
         {
             "id": id,
@@ -693,8 +696,10 @@ async def login(request: web.Request) -> web.Response:
 # Swimmer Queries
 @router.post("/swimmers")
 @handle_json_error
-@auth_required
 async def create_swimmer(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
     info = await request.json()
     first_name = info["first_name"]
     last_name = info["last_name"]
@@ -790,8 +795,10 @@ async def get_swimmer_bests(request: web.Request) -> web.Response:
 
 # Team Queries
 @router.post("/teams")
-@auth_required
 async def create_team(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
     info = await request.json()
     name = info["name"]
     address = info["address"]
@@ -850,8 +857,10 @@ async def get_team_roster_all(request: web.Request) -> web.Response:
 
 # Meet Queries
 @router.post("/meets")
-@auth_required
 async def create_meet(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
     info = await request.json()
     name = info["name"]
     venue = info["venue"]
@@ -935,8 +944,10 @@ async def get_meet_entries_by_team(request: web.Request) -> web.Response:
 
 # Entry Queries
 @router.post("/entries")
-@auth_required
 async def create_entry(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
     info = await request.json()
     swimmer = info["swimmer"]
     meet = info["meet"]
@@ -1061,8 +1072,10 @@ async def get_all_top5(request: web.Request) -> web.Response:
 
 
 @router.get("/top5/update")
-@auth_required
 async def get_all_top5(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=2)
+    if a.status != 200:
+        return a
     db = request.config_dict["DB"]
     top5 = await fetch_all_top5(db)
     with open(f'{os.path.expanduser("~")}/shared/top5-autoupdated.html', "w") as f:
