@@ -1,4 +1,8 @@
-import sqlite3
+import psycopg2
+import json
+
+with open("creds.json", "r") as f:
+    creds = json.load(f)
 
 standards = ["USAS-BB", "USAS-A", "USAS-AA", "USAS-SS"]
 
@@ -30,30 +34,38 @@ def format_time(e):
         return e
 
 
+con = psycopg2.connect(
+            user=creds["database"]["username"],
+            password=creds["database"]["password"],
+            database=creds["database"]["database"],
+            host=creds["database"]["host"],
+            port="5432",
+        )
+
+cur = con.cursor()
+
+
 for event in events:
     for standard in standards:
-        con = sqlite3.connect("~/api.sagh-st.org/db.sqlite3")
-
         code = f"{standard}-{event}"
-
-        s = con.execute("SELECT * FROM standards WHERE code = ?", [code])
-        row = s.fetchone()
+        cur.execute(f"SELECT * FROM standards WHERE code = '{code}'")
+        row = cur.fetchone()
         print(row)
         try:
             min_time = format_time(row[3])
         except:
             continue
 
-        times = con.execute("SELECT * FROM entries WHERE event = ?", [event])
-        rows = times.fetchall()
+        cur.execute(f"SELECT * FROM entries WHERE event = '{event}'")
+        rows = cur.fetchall()
 
         for entry in rows:
             print(entry)
             t = format_time(entry[5])
             if t <= min_time:
                 print(f"{t} <= {min_time}")
-                e = con.execute(
-                    "UPDATE entries SET standards = ? WHERE id = ?", [code, entry[0]]
+                e = cur.execute(
+                    f"UPDATE entries SET standards = '{code}' WHERE id = '{entry[0]}'"
                 )
                 con.commit()
                 print(f"Set {event} {entry[1]} ({entry[5]}) to {code}")

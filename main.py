@@ -14,7 +14,7 @@ from typing import AsyncIterator, Awaitable, Callable
 from enum import Enum
 from tabulate import tabulate
 
-import aiosqlite
+import asyncpg
 from aiohttp import web
 import aiohttp_cors
 
@@ -23,6 +23,10 @@ router = web.RouteTableDef()
 
 class NotFoundException(BaseException):
     pass
+
+
+with open("creds.json", "r") as f:
+    creds = json.load(f)
 
 
 def top5Sort(e):
@@ -92,302 +96,285 @@ class Events(Enum):
     FOUR_FREE_R = "400 Freestyle Relay"
 
 
-async def fetch_standard(db: aiosqlite.Connection, code):
+async def fetch_standard(db: asyncpg.Connection, code):
     if type(code) == dict:
         code = code["code"]
     if code is None:
         return None
-    async with db.execute("SELECT * FROM standards WHERE code = ?", [code]) as cursor:
-        row = await cursor.fetchone()
-        if not row:
-            raise NotFoundException(f"Standard {code} does not exist!")
-        return {
-            "code": row["code"],
-            "name": row["name"],
-            "authority": row["authority"],
-            "min_time": row["min_time"],
-            "year": row["year"],
-            "event": row["event"],
-            "gender": row["gender"],
-            "short_name": row["short_name"],
-            "course": row["course"],
+    row = await db.fetchrow("SELECT * FROM standards WHERE code = $1", code)
+    if not row:
+        raise NotFoundException(f"Standard {code} does not exist!")
+    return {
+        "code": row["code"],
+        "name": row["name"],
+        "authority": row["authority"],
+        "min_time": row["min_time"],
+        "year": row["year"],
+        "event": row["event"],
+        "gender": row["gender"],
+        "short_name": row["short_name"],
+        "course": row["course"],
+    }
+
+
+async def fetch_entry(db: asyncpg.Connection, id: int):
+    row = await db.fetchrow("SELECT * FROM entries WHERE id = $1", id)
+    if not row:
+        raise NotFoundException(f"Entry {id} does not exist!")
+    return {
+        "id": row["id"],
+        "swimmer": await fetch_swimmer(db, row["swimmer"]),
+        "meet": await fetch_meet(db, row["meet"]),
+        "event": await fetch_event(db, row["event"]),
+        "seed": row["seed"],
+        "time": row["time"],
+        "splits": json.loads(row["splits"]),
+        "standards": await fetch_standard(db, row["standards"]),
+    }
+
+
+async def fetch_entry_lite(db: asyncpg.Connection, id: int):
+    row = await db.fetchrow("SELECT * FROM entries WHERE id = $1", id)
+    if not row:
+        raise NotFoundException(f"Entry {id} does not exist!")
+    return {
+        "id": row["id"],
+        "meet": await fetch_meet(db, row["meet"]),
+        "event": await fetch_event(db, row["event"]),
+        "seed": row["seed"],
+        "time": row["time"],
+        "splits": json.loads(row["splits"]),
+        "standards": await fetch_standard(db, row["standards"]),
+    }
+
+
+async def fetch_event(db: asyncpg.Connection, id: int):
+    row = await db.fetchrow("SELECT * FROM events WHERE code = $1", id)
+    if not row:
+        raise NotFoundException(f"Event {id} does not exist!")
+    return {
+        "code": row["code"],
+        "name": row["name"],
+        "distance": row["distance"],
+        "stroke": row["stroke"],
+        "relay": row["relay"],
+    }
+
+
+async def fetch_event_all_entries(db: asyncpg.Connection, id: int):
+    rows = await db.fetch("SELECT * FROM entries WHERE event = $1", id)
+    if not rows:
+        raise NotFoundException(f"Event {id} does not exist!")
+    entries = []
+    for entry in rows:
+        e = {
+            "swimmer": await fetch_swimmer(db, entry["swimmer"]),
+            "meet": await fetch_meet(db, entry["meet"]),
+            "seed": entry["seed"],
+            "time": entry["time"],
+            "splits": json.loads(entry["splits"]),
+            "standards": await fetch_standard(db, entry["standards"]),
         }
+        entries.append(e)
+    return entries
 
 
-async def fetch_entry(db: aiosqlite.Connection, id: int):
-    async with db.execute("SELECT * FROM entries WHERE id = ?", [id]) as cursor:
-        row = await cursor.fetchone()
-        if not row:
-            raise NotFoundException(f"Entry {id} does not exist!")
-        return {
-            "id": row["id"],
-            "swimmer": await fetch_swimmer(db, row["swimmer"]),
-            "meet": await fetch_meet(db, row["meet"]),
-            "event": await fetch_event(db, row["event"]),
-            "seed": row["seed"],
-            "time": row["time"],
-            "splits": json.loads(row["splits"]),
-            "standards": await fetch_standard(db, row["standards"]),
+async def fetch_event_top_five(db: asyncpg.Connection, id: str):
+    rows = await db.fetch("SELECT * FROM entries WHERE event = $1", id)
+    if not rows:
+        raise NotFoundException(f"Event {id} does not exist!")
+    entries = []
+    for entry in rows:
+        try:
+            if json.loads(entry["splits"])[0] == 0.0:
+                continue
+        except IndexError:
+            pass
+        s = await fetch_swimmer(db, entry["swimmer"])
+        name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+        m = await fetch_meet(db, entry["meet"])
+        e = {
+            "swimmer": name,
+            "swim_id": s["id"],
+            "meet": m["designator"],
+            "season": m["season"],
+            "time": str(entry["time"]),
+            "standards": await fetch_standard(db, entry["standards"]),
         }
+        entries.append(e)
+    entries.sort(key=top5Sort)
+    swimmers = []
+    top5 = []
+    for entry in entries:
+        if entry["swim_id"] in swimmers:
+            continue
+        else:
+            swimmers.append(entry["swim_id"])
+            top5.append(entry)
+    return top5[:5]
 
 
-async def fetch_entry_lite(db: aiosqlite.Connection, id: int):
-    async with db.execute("SELECT * FROM entries WHERE id = ?", [id]) as cursor:
-        row = await cursor.fetchone()
-        if not row:
-            raise NotFoundException(f"Entry {id} does not exist!")
-        return {
-            "id": row["id"],
-            "meet": await fetch_meet(db, row["meet"]),
-            "event": await fetch_event(db, row["event"]),
-            "seed": row["seed"],
-            "time": row["time"],
-            "splits": json.loads(row["splits"]),
-            "standards": await fetch_standard(db, row["standards"]),
-        }
-
-
-async def fetch_event(db: aiosqlite.Connection, id: int):
-    async with db.execute("SELECT * FROM events WHERE code = ?", [id]) as cursor:
-        row = await cursor.fetchone()
-        if not row:
-            raise NotFoundException(f"Event {id} does not exist!")
-        return {
-            "code": row["code"],
-            "name": row["name"],
-            "distance": row["distance"],
-            "stroke": row["stroke"],
-            "relay": row["relay"],
-        }
-
-
-async def fetch_event_all_entries(db: aiosqlite.Connection, id: int):
-    async with db.execute("SELECT * FROM entries WHERE event = ?", [id]) as cursor:
-        rows = await cursor.fetchall()
-        if not rows:
-            raise NotFoundException(f"Event {id} does not exist!")
-        entries = []
-        for entry in rows:
-            e = {
-                "swimmer": await fetch_swimmer(db, entry["swimmer"]),
-                "meet": await fetch_meet(db, entry["meet"]),
-                "seed": entry["seed"],
-                "time": entry["time"],
-                "splits": json.loads(entry["splits"]),
-                "standards": await fetch_standard(db, entry["standards"]),
-            }
-            entries.append(e)
-        return entries
-
-
-async def fetch_event_top_five(db: aiosqlite.Connection, id: str):
-    async with db.execute("SELECT * FROM entries WHERE event = ?", [id]) as cursor:
-        rows = await cursor.fetchall()
-        if not rows:
-            raise NotFoundException(f"Event {id} does not exist!")
-        entries = []
-        for entry in rows:
-            try:
-                if json.loads(entry["splits"])[0] == 0.0:
-                    continue
-            except IndexError:
-                pass
+async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
+    rows = await db.fetch(
+        "SELECT id FROM swimmers WHERE team = $1 ORDER BY last_name", str(team)
+    )
+    entries = {}
+    m = await fetch_meet(db, meet)
+    for swimmer in rows:
+        rows2 = await db.fetch(
+            "SELECT * FROM entries WHERE meet = $1 AND swimmer = $2",
+            int(meet),
+            int(swimmer["id"]),
+        )
+        for entry in rows2:
             s = await fetch_swimmer(db, entry["swimmer"])
-            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
-            m = await fetch_meet(db, entry["meet"])
+            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}"
             e = {
                 "swimmer": name,
                 "swim_id": s["id"],
+                "event": await fetch_event(db, entry["event"]),
                 "meet": m["designator"],
+                "seed": entry["seed"],
                 "season": m["season"],
                 "time": str(entry["time"]),
                 "standards": await fetch_standard(db, entry["standards"]),
             }
-            entries.append(e)
-        entries.sort(key=top5Sort)
-        swimmers = []
-        top5 = []
-        for entry in entries:
-            if entry["swim_id"] in swimmers:
-                continue
-            else:
-                swimmers.append(entry["swim_id"])
-                top5.append(entry)
-        return top5[:5]
+            try:
+                entries[entry["event"]].append(e)
+            except KeyError:
+                entries[entry["event"]] = [e]
+    for event in entries:
+        entries[event].sort(key=sortbyTime)
+    keys = list(entries.keys())
+    keys.sort()
+    sorted_entries = {i: entries[i] for i in keys}
+    return sorted_entries
 
 
-async def fetch_entries_by_team(db: aiosqlite.Connection, team, meet):
-    async with db.execute(
-        "SELECT id FROM swimmers WHERE team = ? ORDER BY last_name", [str(team)]
-    ) as cursor:
-        rows = await cursor.fetchall()
-        entries = {}
-        m = await fetch_meet(db, meet)
-        for swimmer in rows:
-            async with db.execute(
-                "SELECT * FROM entries WHERE meet = ? AND swimmer = ?",
-                [int(meet), int(swimmer["id"])],
-            ) as cursor2:
-                rows2 = await cursor2.fetchall()
-                for entry in rows2:
-                    s = await fetch_swimmer(db, entry["swimmer"])
-                    name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}"
-                    e = {
-                        "swimmer": name,
-                        "swim_id": s["id"],
-                        "event": await fetch_event(db, entry["event"]),
-                        "meet": m["designator"],
-                        "seed": entry["seed"],
-                        "season": m["season"],
-                        "time": str(entry["time"]),
-                        "standards": await fetch_standard(db, entry["standards"]),
-                    }
-                    try:
-                        entries[entry["event"]].append(e)
-                    except KeyError:
-                        entries[entry["event"]] = [e]
-        for event in entries:
-            entries[event].sort(key=sortbyTime)
-        keys = list(entries.keys())
-        keys.sort()
-        sorted_entries = {i: entries[i] for i in keys}
-        return sorted_entries
+async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
+    rows = await db.fetch("SELECT event FROM entries WHERE meet = $1", id)
+    if not rows:
+        raise NotFoundException(f"Meet {id} does not exist!")
+    entries = []
+    events = []
+    for event in rows:
+        event = event["event"]
+        if event in events:
+            continue
+        events.append(event)
+        ev = await fetch_event(db, event)
+        obj = ev
+        obj["entries"] = []
+        rows1 = await db.fetch(
+            "SELECT * FROM entries WHERE meet = $1 AND event = $2", id, event
+        )
+        for entry in rows1:
+            s = await fetch_swimmer(db, entry["swimmer"])
+            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+            obj["entries"].append(
+                {
+                    "swimmer": name,
+                    "meet": await fetch_meet(db, entry["meet"]),
+                    "event": await fetch_event(db, entry["event"]),
+                    "seed": entry["seed"],
+                    "time": entry["time"],
+                    "splits": json.loads(entry["splits"]),
+                    "standards": await fetch_standard(db, entry["standards"]),
+                }
+            )
+        obj["entries"].sort(key=sortbyTime)
+        entries.append(obj)
+    return entries
 
 
-async def fetch_entries_by_meet(db: aiosqlite.Connection, id: int):
-    async with db.execute("SELECT event FROM entries WHERE meet = ?", [id]) as cursor:
-        rows = await cursor.fetchall()
-        if not rows:
-            raise NotFoundException(f"Meet {id} does not exist!")
-        entries = []
-        events = []
-        for event in rows:
-            event = event["event"]
-            if event in events:
-                continue
-            events.append(event)
-            ev = await fetch_event(db, event)
-            obj = ev
-            obj["entries"] = []
-            async with db.execute(
-                "SELECT * FROM entries WHERE meet = ? AND event = ?", [id, event]
-            ) as c:
-                rows1 = await c.fetchall()
-                for entry in rows1:
-                    s = await fetch_swimmer(db, entry["swimmer"])
-                    name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
-                    obj["entries"].append(
-                        {
-                            "swimmer": name,
-                            "meet": await fetch_meet(db, entry["meet"]),
-                            "event": await fetch_event(db, entry["event"]),
-                            "seed": entry["seed"],
-                            "time": entry["time"],
-                            "splits": json.loads(entry["splits"]),
-                            "standards": await fetch_standard(db, entry["standards"]),
-                        }
-                    )
-                obj["entries"].sort(key=sortbyTime)
-                entries.append(obj)
-        return entries
+async def fetch_team_roster(db: asyncpg.Connection, id: int):
+    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1 AND active = 1", id)
+    roster = []
+    for swimmer in rows:
+        s = await fetch_swimmer_lite(db, swimmer["id"])
+        roster.append(s)
+    return sorted(roster, key=lambda d: d["last_name"])
 
 
-async def fetch_team_roster(db: aiosqlite.Connection, id: int):
-    async with db.execute(
-        "SELECT * FROM swimmers WHERE team = ? AND active = 1", [id]
-    ) as cursor:
-        rows = await cursor.fetchall()
-        roster = []
-        for swimmer in rows:
-            s = await fetch_swimmer_lite(db, swimmer["id"])
-            roster.append(s)
-        return sorted(roster, key=lambda d: d["last_name"])
+async def fetch_team_roster_all(db: asyncpg.Connection, id: int):
+    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1", id)
+    print(rows)
+    roster = []
+    for swimmer in rows:
+        print(swimmer)
+        s = await fetch_swimmer_lite(db, swimmer["id"])
+        roster.append(s)
+    return sorted(roster, key=lambda d: d["last_name"])
 
 
-async def fetch_team_roster_all(db: aiosqlite.Connection, id: int):
-    async with db.execute("SELECT * FROM swimmers WHERE team = ?", [id]) as cursor:
-        rows = await cursor.fetchall()
-        roster = []
-        for swimmer in rows:
-            s = await fetch_swimmer_lite(db, swimmer["id"])
-            roster.append(s)
-        return sorted(roster, key=lambda d: d["last_name"])
+async def fetch_team(db: asyncpg.Connection, id: int):
+    row = await db.fetchrow("SELECT * FROM teams WHERE code = $1", id)
+    if not row:
+        raise NotFoundException(f"Team {id} does not exist!")
+    return {
+        "name": row["name"],
+        "address": row["address"],
+        "head_coach": row["head_coach"],
+        "email": row["email"],
+        "phone": row["phone"],
+        "code": row["code"],
+    }
 
 
-async def fetch_team(db: aiosqlite.Connection, id: int):
-    async with db.execute("SELECT * FROM teams WHERE code = ?", [id]) as cursor:
-        row = await cursor.fetchone()
-        if not row:
-            raise NotFoundException(f"Team {id} does not exist!")
-        return {
-            "name": row["name"],
-            "address": row["address"],
-            "head_coach": row["head_coach"],
-            "email": row["email"],
-            "phone": row["phone"],
-            "code": row["code"],
-        }
+async def fetch_swimmer(db: asyncpg.Connection, id: int):
+    row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", id)
+    if not row:
+        raise NotFoundException(f"Swimmer {id} does not exist!")
+    return {
+        "id": row["id"],
+        "first_name": row["first_name"],
+        "middle_name": row["middle_name"],
+        "last_name": row["last_name"],
+        "age": row["age"],
+        "gender": row["gender"],
+        "class": row["class"],
+        "team": await fetch_team(db, row["team"]),
+        "active": row["active"],
+    }
 
 
-async def fetch_swimmer(db: aiosqlite.Connection, id: int):
-    async with db.execute("SELECT * FROM swimmers WHERE id = ?", [id]) as cursor:
-        row = await cursor.fetchone()
-        if not row:
-            raise NotFoundException(f"Swimmer {id} does not exist!")
-        return {
-            "id": row["id"],
-            "first_name": row["first_name"],
-            "middle_name": row["middle_name"],
-            "last_name": row["last_name"],
-            "age": row["age"],
-            "gender": row["gender"],
-            "class": row["class"],
-            "team": await fetch_team(db, row["team"]),
-            "active": row["active"],
-        }
+async def fetch_swimmer_entries(db: asyncpg.Connection, id: int):
+    rows = await db.fetch("SELECT event FROM entries WHERE swimmer = $1", int(id))
+    if not rows:
+        raise NotFoundException(f"Swimmer {id} does not exist!")
+    entries = []
+    events = []
+    for event in rows:
+        event = event["event"]
+        if event in events:
+            continue
+        events.append(event)
+        ev = await fetch_event(db, event)
+        obj = ev
+        obj["entries"] = []
+        rows1 = await db.fetch(
+            "SELECT * FROM entries WHERE swimmer = $1 AND event = $2", int(id), event
+        )
+        for entry in rows1:
+            s = await fetch_swimmer(db, entry["swimmer"])
+            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+            obj["entries"].append(
+                {
+                    "swimmer": name,
+                    "meet": await fetch_meet(db, entry["meet"]),
+                    "event": await fetch_event(db, entry["event"]),
+                    "seed": entry["seed"],
+                    "time": entry["time"],
+                    "splits": json.loads(entry["splits"]),
+                    "standards": await fetch_standard(db, entry["standards"]),
+                }
+            )
+        obj["entries"].sort(key=sortbyTime)
+        entries.append(obj)
+    return entries
 
 
-async def fetch_swimmer_entries(db: aiosqlite.Connection, id: int):
-    async with db.execute(
-        "SELECT event FROM entries WHERE swimmer = ?", [id]
-    ) as cursor:
-        rows = await cursor.fetchall()
-        if not rows:
-            raise NotFoundException(f"Swimmer {id} does not exist!")
-        entries = []
-        events = []
-        for event in rows:
-            event = event["event"]
-            if event in events:
-                continue
-            events.append(event)
-            ev = await fetch_event(db, event)
-            obj = ev
-            obj["entries"] = []
-            async with db.execute(
-                "SELECT * FROM entries WHERE swimmer = ? AND event = ?", [id, event]
-            ) as c:
-                rows1 = await c.fetchall()
-                for entry in rows1:
-                    s = await fetch_swimmer(db, entry["swimmer"])
-                    name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
-                    obj["entries"].append(
-                        {
-                            "swimmer": name,
-                            "meet": await fetch_meet(db, entry["meet"]),
-                            "event": await fetch_event(db, entry["event"]),
-                            "seed": entry["seed"],
-                            "time": entry["time"],
-                            "splits": json.loads(entry["splits"]),
-                            "standards": await fetch_standard(db, entry["standards"]),
-                        }
-                    )
-                obj["entries"].sort(key=sortbyTime)
-                entries.append(obj)
-        return entries
-
-
-async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
+async def fetch_swimmer_best_times(db: asyncpg.Connection, id: int):
     s = await fetch_swimmer_lite(db, id)
     name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
     g = s["gender"].upper()
@@ -441,121 +428,115 @@ async def fetch_swimmer_best_times(db: aiosqlite.Connection, id: int):
     return events_list
 
 
-async def fetch_swimmer_entries_event(db: aiosqlite.Connection, id: int, event: str):
-    async with db.execute(
-        "SELECT * FROM entries WHERE swimmer = ? AND event = ?", [id, event]
-    ) as cursor:
-        rows = await cursor.fetchall()
-        if not rows:
-            return []
-        entries = []
-        for entry in rows:
-            s = await fetch_swimmer(db, entry["swimmer"])
-            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
-            entries.append(
-                {
-                    "swimmer": name,
-                    "meet": await fetch_meet(db, entry["meet"]),
-                    "event": await fetch_event(db, entry["event"]),
-                    "seed": entry["seed"],
-                    "time": entry["time"],
-                    "splits": json.loads(entry["splits"]),
-                    "standards": await fetch_standard(db, entry["standards"]),
-                }
-            )
-        return entries
+async def fetch_swimmer_entries_event(db: asyncpg.Connection, id: int, event: str):
+    rows = await db.fetch(
+        "SELECT * FROM entries WHERE swimmer = $1 AND event = $2", id, event
+    )
+    if not rows:
+        return []
+    entries = []
+    for entry in rows:
+        s = await fetch_swimmer(db, entry["swimmer"])
+        name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+        entries.append(
+            {
+                "swimmer": name,
+                "meet": await fetch_meet(db, entry["meet"]),
+                "event": await fetch_event(db, entry["event"]),
+                "seed": entry["seed"],
+                "time": entry["time"],
+                "splits": json.loads(entry["splits"]),
+                "standards": await fetch_standard(db, entry["standards"]),
+            }
+        )
+    return entries
 
 
-async def fetch_swimmer_lite(db: aiosqlite.Connection, id: int):
-    async with db.execute("SELECT * FROM swimmers WHERE id = ?", [id]) as cursor:
-        row = await cursor.fetchone()
-        if not row:
-            raise NotFoundException(f"Swimmer {id} does not exist!")
-        return {
-            "id": row["id"],
-            "first_name": row["first_name"],
-            "middle_name": row["middle_name"],
-            "last_name": row["last_name"],
-            "age": row["age"],
-            "gender": row["gender"],
-            "class": row["class"],
-            "active": row["active"],
-        }
+async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
+    row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", id)
+    if not row:
+        raise NotFoundException(f"Swimmer {id} does not exist!")
+    return {
+        "id": row["id"],
+        "first_name": row["first_name"],
+        "middle_name": row["middle_name"],
+        "last_name": row["last_name"],
+        "age": row["age"],
+        "gender": row["gender"],
+        "class": row["class"],
+        "active": row["active"],
+    }
 
 
-async def fetch_meet(db: aiosqlite.Connection, id: int):
-    async with db.execute("SELECT * FROM meets WHERE id = ?", [id]) as cursor:
-        row = await cursor.fetchone()
-        if not row:
-            raise NotFoundException(f"Meet {id} does not exist!")
-        return {
-            "id": row["id"],
-            "name": row["name"],
-            "venue": row["venue"],
-            "designator": row["designator"],
-            "date": row["date"],
-            "season": row["season"],
-            "most_recent": row["most_recent"],
-        }
+async def fetch_meet(db: asyncpg.Connection, id: int):
+    row = await db.fetchrow("SELECT * FROM meets WHERE id = $1", id)
+    if not row:
+        raise NotFoundException(f"Meet {id} does not exist!")
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "venue": row["venue"],
+        "designator": row["designator"],
+        "date": row["date"],
+        "season": row["season"],
+        "most_recent": row["most_recent"],
+    }
 
 
-async def fetch_all_meets(db: aiosqlite.Connection):
-    async with db.execute("SELECT * FROM meets") as cursor:
-        rows = await cursor.fetchall()
-        if not rows:
-            raise NotFoundException(f"Unexpected error!")
-        meets = []
-        for row in rows:
-            meets.append(
-                {
-                    "season": row["season"],
-                    "id": row["id"],
-                    "name": row["name"],
-                    "venue": row["venue"],
-                    "designator": row["designator"],
-                    "date": row["date"],
-                    "most_recent": row["most_recent"],
-                }
-            )
-        meets.sort(key=lambda d: d["season"], reverse=True)
-        return meets
+async def fetch_all_meets(db: asyncpg.Connection):
+    rows = await db.fetch("SELECT * FROM meets")
+    if not rows:
+        raise NotFoundException(f"Unexpected error!")
+    meets = []
+    for row in rows:
+        meets.append(
+            {
+                "season": row["season"],
+                "id": row["id"],
+                "name": row["name"],
+                "venue": row["venue"],
+                "designator": row["designator"],
+                "date": row["date"],
+                "most_recent": row["most_recent"],
+            }
+        )
+    meets.sort(key=lambda d: d["season"], reverse=True)
+    return meets
 
 
-async def fetch_meets_by_season(db: aiosqlite.Connection, season: int):
-    async with db.execute("SELECT * FROM meets WHERE season = ?", [season]) as cursor:
-        rows = await cursor.fetchall()
-        if not rows:
-            raise NotFoundException(f"No meets in season {season}")
-        meets = []
-        for row in rows:
-            meets.append(
-                {
-                    "season": row["season"],
-                    "id": row["id"],
-                    "name": row["name"],
-                    "venue": row["venue"],
-                    "designator": row["designator"],
-                    "date": row["date"],
-                    "most_recent": row["most_recent"],
-                }
-            )
-        return meets
+async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
+    rows = await db.fetch("SELECT * FROM meets WHERE season = $1", season)
+    if not rows:
+        raise NotFoundException(f"No meets in season {season}")
+    meets = []
+    for row in rows:
+        meets.append(
+            {
+                "season": row["season"],
+                "id": row["id"],
+                "name": row["name"],
+                "venue": row["venue"],
+                "designator": row["designator"],
+                "date": row["date"],
+                "most_recent": row["most_recent"],
+            }
+        )
+    return meets
 
 
-async def fetch_latest_meet(db: aiosqlite.Connection):
-    async with db.execute("SELECT * FROM meets WHERE most_recent = 1") as cursor:
-        row = await cursor.fetchone()
-        if not row:
-            raise NotFoundException(f"No recent meet!")
-        return {
-            "id": row["id"],
-            "name": row["name"],
-            "venue": row["venue"],
-            "designator": row["designator"],
-            "date": row["date"],
-            "season": row["season"],
-            "most_recent": row["most_recent"],
-        }
+async def fetch_latest_meet(db: asyncpg.Connection):
+    row = await db.fetchrow("SELECT * FROM meets WHERE most_recent = 1")
+    if not row:
+        raise NotFoundException(f"No recent meet!")
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "venue": row["venue"],
+        "designator": row["designator"],
+        "date": row["date"],
+        "season": row["season"],
+        "most_recent": row["most_recent"],
+    }
 
 
 def handle_json_error(
@@ -594,17 +575,15 @@ def auth_required(
                 status=400,
             )
         db = request.config_dict["DB"]
-        c = await db.execute("SELECT user_id FROM auth_tokens WHERE token = ?", [token])
-        r = await c.fetchone()
+        r = await db.fetchrow("SELECT user_id FROM auth_tokens WHERE token = $1", token)
         if r is None:
             return web.json_response(
                 {"status": "unauthorized", "reason": "mismatched token"}, status=401
             )
         else:
-            c2 = await db.execute(
-                "SELECT permissions FROM users WHERE id = ?", [r["user_id"]]
+            r2 = await db.fetchrow(
+                "SELECT permissions FROM users WHERE id = $1", r["user_id"]
             )
-            r2 = await c2.fetchone()
             if permission <= r2["permissions"]:
                 return await func(request)
             else:
@@ -623,31 +602,28 @@ def strip_token(token: str):
     t = token.split(".")
     id = (base64.b64decode(t[0].encode())).decode()
     token_r = t[0]
-    return {
-        "user_id": id,
-        "token": token_r
-    }
+    return {"user_id": id, "token": token_r}
 
 
 @router.post("/auth/check")
 @auth_required
 async def auth_check(request: web.Request) -> web.Response:
-    token = strip_token(request.headers['token'])
-    db = request.config_dict['DB']
-    c = await db.execute(
-        "SELECT name, username, email, permissions FROM users WHERE id = ?", [token['user_id']]
+    token = strip_token(request.headers["token"])
+    db = request.config_dict["DB"]
+    r = await db.fetchrow(
+        "SELECT name, username, email, permissions FROM users WHERE id = $1",
+        token["user_id"],
     )
-    r = await c.fetchone()
     return web.json_response(
         {
             "status": "ok",
             "user": {
-                "id": token['user_id'],
-                "name": r['name'],
-                "username": r['username'],
-                "email": r['email'],
-                "permissions": r['permissions'],
-            }
+                "id": token["user_id"],
+                "name": r["name"],
+                "username": r["username"],
+                "email": r["email"],
+                "permissions": r["permissions"],
+            },
         }
     )
 
@@ -690,10 +666,9 @@ async def login(request: web.Request) -> web.Response:
     username = info["username"]
     password = info["password"]
     db = request.config_dict["DB"]
-    c = await db.execute(
-        "SELECT id, username, password FROM users WHERE username = ?", [username]
+    r = await db.fetchrow(
+        "SELECT id, username, password FROM users WHERE username = $1", username
     )
-    r = await c.fetchone()
     if r is None:
         return web.json_response(
             {"status": "failed", "reason": "username/password mismatch"}, status=401
@@ -704,13 +679,14 @@ async def login(request: web.Request) -> web.Response:
         )
     else:
         token_r = secrets.token_urlsafe(32)
-        token_i = base64.b64encode(str(r['id']).encode()).decode()
+        token_i = base64.b64encode(str(r["id"]).encode()).decode()
         token = f"{token_i}.{token_r}"
         await db.execute(
-            "INSERT INTO auth_tokens (user_id, token) VALUES (?, ?) ON CONFLICT (user_id) DO UPDATE SET token = ?",
-            [r["id"], str(token), str(token)],
+            "INSERT INTO auth_tokens (user_id, token) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET token = $3",
+            r["id"],
+            str(token),
+            str(token),
         )
-        await db.commit()
         return web.json_response({"user_id": r["id"], "token": token})
 
 
@@ -738,11 +714,18 @@ async def create_swimmer(request: web.Request) -> web.Response:
         active = True
     db = request.config_dict["DB"]
     await db.execute(
-        "INSERT INTO swimmers (id, first_name, last_name, middle_name, age, class, team, active, gender) VALUES(?, ?, "
-        "?, ?, ?, ?, ?, ?, ?)",
-        [id, first_name, last_name, middle_name, age, year, team, active, gender],
+        "INSERT INTO swimmers (id, first_name, last_name, middle_name, age, class, team, active, gender) VALUES($1, $2, "
+        "$3, $4, $5, $6, $7, $8, $9)",
+        id,
+        first_name,
+        last_name,
+        middle_name,
+        age,
+        year,
+        team,
+        active,
+        gender,
     )
-    await db.commit()
     return web.json_response(
         {
             "id": id,
@@ -760,14 +743,14 @@ async def create_swimmer(request: web.Request) -> web.Response:
 @router.get("/info")
 async def db_info(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
-    entries: aiosqlite.Cursor = await db.execute("SELECT count(*) from entries")
-    meets = await db.execute("SELECT count(*) from meets")
-    athletes = await db.execute("SELECT count(*) from swimmers")
+    entries = await db.fetchrow("SELECT count(*) from entries")
+    meets = await db.fetchrow("SELECT count(*) from meets")
+    athletes = await db.fetchrow("SELECT count(*) from swimmers")
     response = {
         "status": "online",
-        "entries": (await entries.fetchone())[0],
-        "meets": (await meets.fetchone())[0],
-        "athletes": (await athletes.fetchone())[0],
+        "entries": entries["count"],
+        "meets": meets["count"],
+        "athletes": athletes["count"],
     }
     return web.json_response(response)
 
@@ -819,10 +802,15 @@ async def create_team(request: web.Request) -> web.Response:
     id = generate_id(4)
     db = request.config_dict["DB"]
     await db.execute(
-        "INSERT INTO teams (id, name, address, head_coach, email, phone, code) VALUES(?, ?, ?, ?, ?, ?, ?)",
-        [id, name, address, head_coach, email, phone, code],
+        "INSERT INTO teams (id, name, address, head_coach, email, phone, code) VALUES($1, $2, $3, $4, $5, $6, $7)",
+        id,
+        name,
+        address,
+        head_coach,
+        email,
+        phone,
+        code,
     )
-    await db.commit()
     return web.json_response(
         {
             "id": id,
@@ -876,10 +864,15 @@ async def create_meet(request: web.Request) -> web.Response:
     if latest == 1:
         await db.execute("UPDATE meets SET most_recent = 0 WHERE most_recent = 1")
     await db.execute(
-        "INSERT INTO meets (id, name, venue, designator, date, season, most_recent) VALUES(?, ?, ?, ?, ?, ?, ?)",
-        [id, name, venue, designator, date, season, latest],
+        "INSERT INTO meets (id, name, venue, designator, date, season, most_recent) VALUES($1, $2, $3, $4, $5, $6, $7)",
+        id,
+        name,
+        venue,
+        designator,
+        date,
+        season,
+        latest,
     )
-    await db.commit()
     return web.json_response(
         {
             "id": id,
@@ -955,10 +948,15 @@ async def create_entry(request: web.Request) -> web.Response:
     splits = json.dumps(splits)
     db = request.config_dict["DB"]
     await db.execute(
-        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES(?, ?, ?, ?, ?, ?, ?)",
-        [id, swimmer, meet, event, seed, time, splits],
+        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES($1, $2, $3, $4, $5, $6, $7)",
+        id,
+        swimmer,
+        meet,
+        event,
+        seed,
+        time,
+        splits,
     )
-    await db.commit()
     return web.json_response(
         {
             "id": id,
@@ -1079,20 +1077,13 @@ async def ping_http(request: web.Request) -> web.Response:
     return web.json_response(data={"ping": "pong"})
 
 
-def get_db_path() -> Path:
-    here = Path.cwd()
-    while not (here / ".git").exists():
-        if here == here.parent:
-            raise RuntimeError("Cannot find root github dir")
-        here = here.parent
-
-    return here / "db.sqlite3"
-
-
 async def init_db(app: web.Application) -> AsyncIterator[None]:
-    sqlite_db = get_db_path()
-    db = await aiosqlite.connect(sqlite_db)
-    db.row_factory = aiosqlite.Row
+    db = await asyncpg.create_pool(
+        user=creds["database"]["username"],
+        password=creds["database"]["password"],
+        database=creds["database"]["database"],
+        host=creds["database"]["host"],
+    )
     app["DB"] = db
     yield
     await db.close()
@@ -1119,15 +1110,6 @@ async def init_app() -> web.Application:
         cors.add(route)
     app.cleanup_ctx.append(init_db)
     return app
-
-
-def try_make_db() -> None:
-    sqlite_db = get_db_path()
-    if sqlite_db.exists():
-        return
-
-
-try_make_db()
 
 
 web.run_app(init_app())
