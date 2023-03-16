@@ -1,6 +1,6 @@
 import sqlite3
 
-standards = ["USAS-BB", "USAS-A", "USAS-SS"]
+standards = ["USAS-BB", "USAS-A", "USAS-AA", "USAS-SS"]
 
 events = [
     "F200F",
