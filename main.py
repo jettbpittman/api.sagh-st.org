@@ -612,7 +612,7 @@ async def auth_check(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     r = await db.fetchrow(
         "SELECT name, username, email, permissions FROM users WHERE id = $1",
-        str(token["user_id"]),
+        int(token["user_id"]),
     )
     return web.json_response(
         {
