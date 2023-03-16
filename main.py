@@ -667,7 +667,7 @@ async def login(request: web.Request) -> web.Response:
     password = info["password"]
     db = request.config_dict["DB"]
     r = await db.fetchrow(
-        "SELECT id, username, password FROM users WHERE username = $1", username
+        "SELECT id, username, password FROM users WHERE username = $1", str(username)
     )
     if r is None:
         return web.json_response(
@@ -683,7 +683,7 @@ async def login(request: web.Request) -> web.Response:
         token = f"{token_i}.{token_r}"
         await db.execute(
             "INSERT INTO auth_tokens (user_id, token) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET token = $3",
-            r["id"],
+            int(r["id"]),
             str(token),
             str(token),
         )
