@@ -288,7 +288,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
 
 
 async def fetch_team_roster(db: asyncpg.Connection, id: str):
-    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1 AND active = 1", str(id))
+    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1 AND active = true", str(id))
     roster = []
     for swimmer in rows:
         s = await fetch_swimmer_lite(db, swimmer["id"])
