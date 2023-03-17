@@ -691,7 +691,6 @@ async def change_password(request: web.Request) -> web.Response:
 
 
 @router.post("/auth/login")
-@handle_json_error
 async def login(request: web.Request) -> web.Response:
     info = await request.json()
     username = info["username"]
