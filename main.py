@@ -195,12 +195,15 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str):
         m = await fetch_meet(db, entry["meet"])
         e = {
             "swimmer": name,
+            "homeschool": s['homeschool'],
             "swim_id": s["id"],
             "meet": m["designator"],
             "season": m["season"],
             "time": str(entry["time"]),
             "standards": await fetch_standard(db, entry["standards"]),
         }
+        if e['homeschool']:
+            continue
         entries.append(e)
     entries.sort(key=top5Sort)
     swimmers = []
@@ -232,6 +235,7 @@ async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
             e = {
                 "swimmer": name,
                 "swim_id": s["id"],
+                "homeschool": s['homeschool'],
                 "event": await fetch_event(db, entry["event"]),
                 "meet": m["designator"],
                 "seed": entry["seed"],
@@ -274,6 +278,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
             obj["entries"].append(
                 {
                     "swimmer": name,
+                    "homeschool": s['homeschool'],
                     "meet": await fetch_meet(db, entry["meet"]),
                     "event": await fetch_event(db, entry["event"]),
                     "seed": entry["seed"],
@@ -337,6 +342,8 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
         "class": row["class"],
         "team": await fetch_team(db, row["team"]),
         "active": row["active"],
+        "homeschool": row['homeschool'],
+        "dob": row['dob']
     }
 
 
@@ -365,6 +372,7 @@ async def fetch_swimmer_entries(db: asyncpg.Connection, id: int):
             obj["entries"].append(
                 {
                     "swimmer": name,
+                    "homeschool": s['homeschool'],
                     "meet": await fetch_meet(db, entry["meet"]),
                     "event": await fetch_event(db, entry["event"]),
                     "seed": entry["seed"],
@@ -421,6 +429,7 @@ async def fetch_swimmer_best_times(db: asyncpg.Connection, id: int):
             pass
         entry = {
             "swimmer": name,
+            "homeschool": s['homeschool'],
             "meet": fastest["meet"],
             "event": fastest["event"],
             "seed": fastest["seed"],
@@ -445,6 +454,7 @@ async def fetch_swimmer_entries_event(db: asyncpg.Connection, id: int, event: st
         entries.append(
             {
                 "swimmer": name,
+                "homeschool": s['homeschool'],
                 "meet": await fetch_meet(db, entry["meet"]),
                 "event": await fetch_event(db, entry["event"]),
                 "seed": entry["seed"],
@@ -469,6 +479,8 @@ async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
         "gender": row["gender"],
         "class": row["class"],
         "active": row["active"],
+        "homeschool": row['homeschool'],
+        "dob": row['dob']
     }
 
 
