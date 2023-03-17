@@ -576,7 +576,7 @@ async def auth_required(request: web.Request, permissions: int = 0):
             status=400,
         )
     db = request.config_dict["DB"]
-    r = await db.fetch("SELECT user_id FROM auth_tokens WHERE token = $1", str(token))
+    r = await db.fetchrow("SELECT user_id FROM auth_tokens WHERE token = $1", str(token))
     if r is None:
         return web.json_response(
             {"status": "unauthorized", "reason": "mismatched token"}, status=401
