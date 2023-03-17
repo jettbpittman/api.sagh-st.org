@@ -268,7 +268,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
         event = event["event"]
         if event in events:
             continue
-        events.append(event)
+        events += [event]
         ev = await fetch_event(db, event)
         print(ev)
         obj = ev
