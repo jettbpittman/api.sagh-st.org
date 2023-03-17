@@ -743,7 +743,7 @@ async def create_swimmer(request: web.Request) -> web.Response:
     else:
         id = generate_id(1, year)
     if "active" in info:
-        active = info["active"]
+        active = bool(info["active"])
     else:
         active = True
     db = request.config_dict["DB"]
@@ -757,7 +757,7 @@ async def create_swimmer(request: web.Request) -> web.Response:
         age,
         year,
         team,
-        active,
+        bool(active),
         gender,
     )
     return web.json_response(
