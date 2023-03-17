@@ -213,16 +213,9 @@ for result in m:
     pprint.pprint(result)
     splits = json.dumps(result["splits"])
     cur.execute(
-        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [
-            generate_id(3),
-            id,
-            MEET,
-            result["event"],
-            result["seed"],
-            result["time"],
-            splits,
-        ],
+        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        generate_id(3), id, MEET,
+        result["event"], result["seed"], result["time"], splits
     )
     con.commit()
     time.sleep(1)
