@@ -16,12 +16,12 @@ with open("creds.json", "r") as f:
     creds = json.load(f)
 
 con = psycopg2.connect(
-            user=creds["database"]["username"],
-            password=creds["database"]["password"],
-            database=creds["database"]["database"],
-            host=creds["database"]["host"],
-            port="5432",
-        )
+    user=creds["database"]["username"],
+    password=creds["database"]["password"],
+    database=creds["database"]["database"],
+    host=creds["database"]["host"],
+    port="5432",
+)
 
 cur = con.cursor()
 
@@ -58,10 +58,10 @@ def generate_id(id_type: int, year: int = 0, join_date: int = None) -> int:
         # Set epoch to 1 September, 2014 00:00:00+0000
         ts = ts - 1409547600
     return (
-        (int(ts) << 16)
-        + (year << 20)
-        + (id_type << 24)
-        + (random.randint(1, 1000) << 32)
+            (int(ts) << 16)
+            + (year << 20)
+            + (id_type << 24)
+            + (random.randint(1, 1000) << 32)
     )
 
 
@@ -213,9 +213,9 @@ for result in m:
     pprint.pprint(result)
     splits = json.dumps(result["splits"])
     cur.execute(
-        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-        generate_id(3), id, MEET,
-        result["event"], result["seed"], result["time"], splits
+        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (generate_id(3), id, MEET,
+         result["event"], result["seed"], result["time"], splits)
     )
     con.commit()
     time.sleep(1)
