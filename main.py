@@ -37,7 +37,7 @@ def top5Sort(e):
         return e["time"]
 
 
-def sortbyTime(e):
+def sortByTime(e):
     if len(e["time"]) <= 5:
         adjusted_t = f"0:{e['time']}"
         return adjusted_t
@@ -244,7 +244,7 @@ async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
             except KeyError:
                 entries[entry["event"]] = [e]
     for event in entries:
-        entries[event].sort(key=sortbyTime)
+        entries[event].sort(key=sortByTime)
     keys = list(entries.keys())
     keys.sort()
     sorted_entries = {i: entries[i] for i in keys}
@@ -282,7 +282,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
                     "standards": await fetch_standard(db, entry["standards"]),
                 }
             )
-        obj["entries"].sort(key=sortbyTime)
+        obj["entries"].sort(key=sortByTime)
         entries.append(obj)
     return entries
 
@@ -373,7 +373,7 @@ async def fetch_swimmer_entries(db: asyncpg.Connection, id: int):
                     "standards": await fetch_standard(db, entry["standards"]),
                 }
             )
-        obj["entries"].sort(key=sortbyTime)
+        obj["entries"].sort(key=sortByTime)
         entries.append(obj)
     return entries
 
@@ -576,7 +576,7 @@ async def auth_required(request: web.Request, permissions: int = 0):
             status=400,
         )
     db = request.config_dict["DB"]
-    r = await db.fetchrow("SELECT user_id FROM auth_tokens WHERE token = $1", str(token))
+    r = await db.fetch("SELECT user_id FROM auth_tokens WHERE token = $1", str(token))
     if r is None:
         return web.json_response(
             {"status": "unauthorized", "reason": "mismatched token"}, status=401
@@ -586,7 +586,7 @@ async def auth_required(request: web.Request, permissions: int = 0):
             "SELECT permissions FROM users WHERE id = $1", int(r["user_id"])
         )
         if permissions <= r2["permissions"]:
-            return web.json_response({"status": "ok"})
+            return web.json_response({"status": "ok", "id": r['user_id']})
         else:
             return web.json_response(
                 {
@@ -662,6 +662,34 @@ async def create_user(request: web.Request) -> web.Response:
     )
 
 
+@router.post("/users/{id}/password")
+@handle_json_error
+async def change_password(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=0)
+    if a.status != 200:
+        return a
+    info = await request.json()
+    id = a['id']
+    old_password = info['old_password']
+    new_password = info['new_password']
+    db = request.config_dict['DB']
+    ir = await db.fetchrow(
+        "SELECT password FROM users WHERE id = $1", id
+    )
+    if not argon2.verify(old_password, ir['password']):
+        return web.json_response(
+            {"status": "failed", "reason": "incorrect old password"}, status=401
+        )
+    else:
+        hashed = argon2.hash(new_password)
+        await db.execute(
+            "UPDATE users SET password = $1 WHERE id = $2", hashed, id
+        )
+        return web.json_response(
+            {"status": "ok", "reason": "password reset!"}
+        )
+
+
 @router.post("/auth/login")
 @handle_json_error
 async def login(request: web.Request) -> web.Response:
@@ -684,12 +712,14 @@ async def login(request: web.Request) -> web.Response:
         token_r = secrets.token_urlsafe(32)
         token_i = base64.b64encode(str(r["id"]).encode()).decode()
         token = f"{token_i}.{token_r}"
+        ts = datetime.datetime.now().isoformat()
         await db.execute(
-            "INSERT INTO auth_tokens (user_id, token) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET token = $3",
+            "INSERT INTO auth_tokens (user_id, token, timestamp) VALUES ($1, $2, $3)",
             int(r["id"]),
             str(token),
-            str(token),
+            str(ts)
         )
+        await db.execute
         return web.json_response({"user_id": r["id"], "token": token})
 
 
