@@ -718,7 +718,6 @@ async def login(request: web.Request) -> web.Response:
             str(token),
             str(ts)
         )
-        await db.execute
         return web.json_response({"user_id": r["id"], "token": token})
 
 
