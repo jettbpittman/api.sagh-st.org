@@ -274,6 +274,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
         rows1 = await db.fetch(
             "SELECT * FROM entries WHERE meet = $1 AND event = $2", int(id), str(event)
         )
+        print(rows1)
         for entry in rows1:
             print(entry)
             s = await fetch_swimmer(db, entry["swimmer"])
