@@ -263,6 +263,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
     entries = []
     events = []
     for event in rows:
+        print(event)
         event = event["event"]
         if event in events:
             continue
