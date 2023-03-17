@@ -260,6 +260,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
     if not rows:
         raise NotFoundException(f"Meet {id} does not exist!")
     print(id)
+    print(rows)
     entries = []
     events = []
     for event in rows:
