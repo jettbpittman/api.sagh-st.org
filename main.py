@@ -281,8 +281,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
             print(entry)
             s = await fetch_swimmer(db, entry["swimmer"])
             name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
-            obj["entries"].append(
-                {
+            x = {
                     "swimmer": name,
                     "homeschool": s['homeschool'],
                     "meet": await fetch_meet(db, entry["meet"]),
@@ -292,7 +291,8 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
                     "splits": json.loads(entry["splits"]),
                     "standards": await fetch_standard(db, entry["standards"]),
                 }
-            )
+            obj["entries"].append(x)
+            print(x)
         obj["entries"].sort(key=sortByTime)
         print(obj)
         entries.append(obj)
