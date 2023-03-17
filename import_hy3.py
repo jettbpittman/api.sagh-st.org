@@ -1,5 +1,5 @@
 import json
-import sqlite3
+import psycopg2
 import pprint
 import datetime
 import random
@@ -11,6 +11,19 @@ TEAM = "SAGH"
 
 with open(f"{FILE}.json", "r") as f:
     mm_json = json.load(f)
+
+with open("creds.json", "r") as f:
+    creds = json.load(f)
+
+con = psycopg2.connect(
+            user=creds["database"]["username"],
+            password=creds["database"]["password"],
+            database=creds["database"]["database"],
+            host=creds["database"]["host"],
+            port="5432",
+        )
+
+cur = con.cursor()
 
 
 def format_time(time):
@@ -177,32 +190,29 @@ for event in events:
             continue
 
 for result in m:
-    con = sqlite3.connect("db.sqlite3")
-    c = con.execute(
+    c = cur.execute(
         f"SELECT id FROM swimmers WHERE usas_id = '{result['usa_swimming_id']}'"
     )
-    r = c.fetchone()
-    c.close()
+    r = cur.fetchone()
     if r:
         id = str(r[0])
     else:
         name = result["name"].split(",")
         l_name = name[0].strip()
         f_name = name[1].strip()
-        c = con.execute(
+        c = cur.execute(
             f"SELECT id FROM swimmers WHERE last_name = '{l_name}' AND first_name = '{f_name}'"
         )
-        r = c.fetchone()
+        r = cur.fetchone()
         try:
             id = str(r[0])
         except TypeError:
             print(f"Unable to locate {result['name']}")
             continue
-        c.close()
     pprint.pprint(f"{result['name']} - {id}")
     pprint.pprint(result)
     splits = json.dumps(result["splits"])
-    con.execute(
+    cur.execute(
         "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES (?, ?, ?, ?, ?, ?, ?)",
         [
             generate_id(3),
