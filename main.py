@@ -40,8 +40,10 @@ def top5Sort(e):
 def sortByTime(e):
     if len(e["time"]) <= 5:
         adjusted_t = f"0:{e['time']}"
+        print(adjusted_t)
         return adjusted_t
     else:
+        print(e['time'])
         return e["time"]
 
 
