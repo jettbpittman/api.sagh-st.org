@@ -773,10 +773,10 @@ async def create_swimmer(request: web.Request) -> web.Response:
     first_name = info["first_name"]
     last_name = info["last_name"]
     middle_name = info["middle_name"]
-    age = info["age"]
     year = info["class"]
     team = info["team"]
     gender = info["gender"]
+    dob = info['dob']
     if "join_date" in info:
         join_date = info["join_date"]
         id = generate_id(1, year, join_date)
@@ -794,11 +794,11 @@ async def create_swimmer(request: web.Request) -> web.Response:
         first_name,
         last_name,
         middle_name,
-        age,
         year,
         team,
         bool(active),
         gender,
+        dob
     )
     return web.json_response(
         {
@@ -806,12 +806,58 @@ async def create_swimmer(request: web.Request) -> web.Response:
             "first_name": first_name,
             "middle_name": middle_name,
             "last_name": last_name,
-            "age": age,
+            "dob": dob,
             "class": year,
             "team": await fetch_team(db, team),
             "active": active,
         }
     )
+
+
+@router.post("/swimmers/{id}")
+@handle_json_error
+async def create_swimmer(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
+    swimmer_id = request.match_info['id']
+    swimmer = await request.json()
+    fields = {}
+    if "first_name" in swimmer:
+        fields["first_name"] = swimmer['first_name']
+    if "middle_name" in swimmer:
+        fields["middle_name"] = swimmer['middle_name']
+    if "last_name" in swimmer:
+        fields["last_name"] = swimmer['last_name']
+    if "class" in swimmer:
+        fields["class"] = swimmer['class']
+    if "active" in swimmer:
+        fields["active"] = swimmer['active']
+    if fields:
+        field_values = ""
+        for field in fields:
+            field_values += f"{field} = {fields[field]}"
+        db = request.config_dict['DB']
+        await db.execute(
+            f"UPDATE swimmers SET {field_values} WHERE id = $1", swimmer_id
+        )
+    swimmer = await db.fetchrow(
+        "SELECT * FROM swimmers WHERE id = $1", swimmer_id
+    )
+    return web.json_response(
+        {
+            "id": swimmer['id'],
+            "first_name": swimmer['first_name'],
+            "middle_name": swimmer['middle_name'],
+            "last_name": swimmer['last_name'],
+            "age": swimmer['age'],
+            "class": swimmer['class'],
+            "team": await fetch_team(db, swimmer['team']),
+            "active": swimmer['active'],
+        }
+    )
+
+
 
 
 @router.get("/info")
