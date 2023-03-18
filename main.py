@@ -816,7 +816,7 @@ async def create_swimmer(request: web.Request) -> web.Response:
 
 @router.patch("/swimmers/{id}")
 @handle_json_error
-async def create_swimmer(request: web.Request) -> web.Response:
+async def edit_swimmer(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=1)
     if a.status != 200:
         return a
@@ -839,7 +839,7 @@ async def create_swimmer(request: web.Request) -> web.Response:
             field_values += f"{field} = {fields[field]}"
         db = request.config_dict['DB']
         await db.execute(
-            f"UPDATE swimmers SET {field_values} WHERE id = $1", swimmer_id
+            f"UPDATE swimmers SET {field_values} WHERE id = $1", int(swimmer_id)
         )
     swimmer = await db.fetchrow(
         "SELECT * FROM swimmers WHERE id = $1", swimmer_id
