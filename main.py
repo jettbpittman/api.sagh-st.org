@@ -298,9 +298,10 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
             print(x)
         print("sorting by time...")
         pprint.pprint(obj)
-        #obj["entries"].sort(key=sortByTime)
-        print(obj)
+        obj["entries"].sort(key=sortByTime)
+        pprint.pprint(obj)
         entries.append(obj)
+        pprint.pprint(entries)
     return entries
 
 
