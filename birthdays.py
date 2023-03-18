@@ -23,7 +23,7 @@ swimmers = cur.fetchall()
 today = datetime.today()
 
 for swimmer in swimmers:
-    print(swimmers)
+    print(swimmer)
     birthday = datetime.strptime(swimmer['dob'], '%Y-%m-%d')
     age_dt = today - birthday
     age = int(age_dt.days / 365)
