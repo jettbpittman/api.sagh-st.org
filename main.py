@@ -261,27 +261,20 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
     rows = await db.fetch("SELECT event FROM entries WHERE meet = $1", int(id))
     if not rows:
         raise NotFoundException(f"Meet {id} does not exist!")
-    print(id)
-    print(rows)
     entries = []
     events = []
     for event in rows:
-        print(event)
-        print(events)
         event = event["event"]
         if event in events:
             continue
         events += [event]
         ev = await fetch_event(db, event)
-        print(ev)
         obj = ev
         obj["entries"] = []
         rows1 = await db.fetch(
             "SELECT * FROM entries WHERE meet = $1 AND event = $2", int(id), str(event)
         )
-        print(rows1)
         for entry in rows1:
-            print(entry)
             s = await fetch_swimmer(db, entry["swimmer"])
             name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
             x = {
@@ -295,13 +288,9 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
                     "standards": await fetch_standard(db, entry["standards"]),
                 }
             obj["entries"].append(x)
-            print(x)
-        print("sorting by time...")
         pprint.pprint(obj)
         obj["entries"].sort(key=sortByTime)
-        pprint.pprint(obj)
         entries.append(obj)
-        pprint.pprint(entries)
     return entries
 
 
