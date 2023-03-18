@@ -318,10 +318,8 @@ async def fetch_team_roster(db: asyncpg.Connection, id: str):
 
 async def fetch_team_roster_all(db: asyncpg.Connection, id: str):
     rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1", str(id))
-    print(rows)
     roster = []
     for swimmer in rows:
-        print(swimmer)
         s = await fetch_swimmer_lite(db, swimmer["id"])
         roster.append(s)
     return sorted(roster, key=lambda d: d["last_name"])
@@ -416,7 +414,6 @@ async def fetch_swimmer_best_times(db: asyncpg.Connection, id: int):
     ]
     for event in events:
         entries = await fetch_swimmer_entries_event(db, id, event)
-        print(entries)
         if not entries:
             entry = {
                 "swimmer": name,
