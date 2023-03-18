@@ -1014,12 +1014,12 @@ async def create_entry(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     await db.execute(
         "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES($1, $2, $3, $4, $5, $6, $7)",
-        id,
-        swimmer,
-        meet,
-        event,
-        seed,
-        time,
+        int(id),
+        int(swimmer),
+        int(meet),
+        str(event),
+        str(seed),
+        str(time),
         splits,
     )
     return web.json_response(
