@@ -858,6 +858,21 @@ async def edit_swimmer(request: web.Request) -> web.Response:
     )
 
 
+@router.patch("/class/{id}/active")
+@handle_json_error
+async def change_class_status(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
+    class_id = request.match_info['id']
+    json = await request.json()
+    active = bool(json['active'])
+    db = request.config_dict['DB']
+    await db.execute(
+        "UPDATE swimmers SET active = $1 WHERE class = $2", active, int(class_id)
+    )
+    return web.json_response({"status": "ok", "reason": "updated!"})
+
 
 
 @router.get("/info")
