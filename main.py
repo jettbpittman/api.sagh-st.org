@@ -1190,7 +1190,7 @@ async def fetch_all_top5(db):
             counter += 1
     date = datetime.datetime.now()
     return (
-        f'<h2>GHMV Top 5 All Time</h2>\n<p style="color: darkred">UPDATED: {date.day} {date.strftime("%B")} {date.year}</p>\n'
+        f'<h2>GHMV Top 5 All Time</h2>\n<p style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
         + tabulate(table, headers=headers, tablefmt="html")
     )
 
