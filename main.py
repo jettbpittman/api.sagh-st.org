@@ -641,9 +641,11 @@ async def auth_check(request: web.Request) -> web.Response:
     token = strip_token(request.headers["token"])
     db = request.config_dict["DB"]
     r = await db.fetchrow(
-        "SELECT name, username, email, permissions FROM users WHERE id = $1",
+        "SELECT name, username, email, permissions, active FROM users WHERE id = $1",
         int(token["user_id"]),
     )
+    if r['active'] is False:
+        return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
     return web.json_response(
         {
             "status": "ok",
