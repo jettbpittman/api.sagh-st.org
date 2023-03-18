@@ -24,11 +24,11 @@ today = datetime.today()
 
 for swimmer in swimmers:
     print(swimmer)
-    birthday = datetime.strptime(swimmer['dob'], '%Y-%m-%d')
+    birthday = datetime.strptime(swimmer[11], '%Y-%m-%d')
     age_dt = today - birthday
     age = int(age_dt.days / 365)
     print(age)
-    if age != swimmer['age']:
+    if age != swimmer[4]:
         print("changing age...")
         cur.execute("UPDATE swimmers SET age = %s WHERE id = %s", (age, swimmer['id']))
         con.commit()
