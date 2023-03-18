@@ -32,5 +32,5 @@ for swimmer in swimmers:
     print(age)
     if age != swimmer[4]:
         print("changing age...")
-        cur.execute("UPDATE swimmers SET age = %s WHERE id = %s", (age, swimmer['id']))
+        cur.execute("UPDATE swimmers SET age = %s WHERE id = %s", (age, swimmer[0]))
         con.commit()
