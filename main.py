@@ -698,7 +698,7 @@ async def get_all_users(request: web.Request) -> web.Response:
     if a.status != 200:
         return a
     db = request.config_dict['DB']
-    users = fetch_all_users(db)
+    users = await fetch_all_users(db)
     return web.json_response(users)
 
 
