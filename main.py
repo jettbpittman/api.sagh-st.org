@@ -554,6 +554,24 @@ async def fetch_latest_meet(db: asyncpg.Connection):
     }
 
 
+async def fetch_all_users(db: asyncpg.Connection):
+    rows = await db.fetch("SELECT username, name, email, permissions, active FROM users")
+    if not rows:
+        raise NotFoundException(f"No users found!")
+    users = []
+    for row in rows:
+        users.append(
+            {
+                "username": row["username"],
+                "name": row["name"],
+                "email": row["email"],
+                "permissions": row["permissions"],
+                "active": row["active"],
+            }
+        )
+    return users
+
+
 def handle_json_error(
     func: Callable[[web.Request], Awaitable[web.Response]]
 ) -> Callable[[web.Request], Awaitable[web.Response]]:
@@ -671,6 +689,17 @@ async def create_user(request: web.Request) -> web.Response:
             "permissions": permissions,
         }
     )
+
+
+@router.get("/users")
+@handle_json_error
+async def get_all_users(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=3)
+    if a.status != 200:
+        return a
+    db = request.config_dict['DB']
+    users = fetch_all_users(db)
+    return web.json_response(users)
 
 
 @router.post("/users/{id}/password")
