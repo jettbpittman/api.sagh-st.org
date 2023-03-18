@@ -842,7 +842,7 @@ async def edit_swimmer(request: web.Request) -> web.Response:
             f"UPDATE swimmers SET {field_values} WHERE id = $1", int(swimmer_id)
         )
     swimmer = await db.fetchrow(
-        "SELECT * FROM swimmers WHERE id = $1", swimmer_id
+        "SELECT * FROM swimmers WHERE id = $1", int(swimmer_id)
     )
     return web.json_response(
         {
