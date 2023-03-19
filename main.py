@@ -694,53 +694,6 @@ async def create_user(request: web.Request) -> web.Response:
     )
 
 
-@router.patch("/users/{id}")
-@handle_json_error
-async def edit_user(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=0)
-    if a.status != 200:
-        return a
-    user_id = request.match_info['id']
-    fields = {}
-    user = await request.json()
-    if a['id'] == user_id:
-        pass
-    elif (await auth_required(request, permissions=3)).status == 200:
-        if "permissions" in user:
-            fields['permissions'] = user['permissions']
-        if "active" in user:
-            fields['active'] = user['active']
-    else:
-        return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
-    if "name" in user:
-        fields["name"] = user['name']
-    if "email" in user:
-        fields["email"] = user['email']
-    if "username" in user:
-        fields["username"] = user['username']
-    db = request.config_dict['DB']
-    if fields:
-        field_values = ""
-        for field in fields:
-            field_values += f"{field} = {fields[field]}"
-        await db.execute(
-            f"UPDATE users SET {field_values} WHERE id = $1", int(user_id)
-        )
-    user = await db.fetchrow(
-        "SELECT * FROM users WHERE id = $1", int(user_id)
-    )
-    return web.json_response(
-        {
-            "id": user['id'],
-            "name": user['name'],
-            "username": user['username'],
-            "email": user['email'],
-            "permissions": user['permissions'],
-            "active": user['active']
-        }
-    )
-
-
 @router.get("/users/all")
 @handle_json_error
 async def get_all_user(request: web.Request) -> web.Response:
