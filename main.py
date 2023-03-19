@@ -745,6 +745,7 @@ async def edit_users(request: web.Request) -> web.Response:
 async def get_all_users(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=3)
     if a.status != 200:
+        print("forbidden")
         return a
     db = request.config_dict['DB']
     users = await fetch_all_users(db)
