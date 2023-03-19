@@ -740,7 +740,7 @@ async def edit_users(request: web.Request) -> web.Response:
     )
 
 
-@router.get("/users")
+@router.get("/users/all")
 @handle_json_error
 async def get_all_users(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=3)
