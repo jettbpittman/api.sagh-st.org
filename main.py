@@ -801,7 +801,7 @@ async def change_password(request: web.Request) -> web.Response:
         return a
     req_id = request.match_info['id']
     if a.user_id != req_id:
-        return web.json_response({"status": "failed", "reason": "forbidden"})
+        return web.json_response({"status": "failed", "reason": f"forbidden - your ID is {a.user_id} while you are trying to access {req_id}"})
     info = await request.json()
     id = req_id
     old_password = info['old_password']
