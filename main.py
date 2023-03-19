@@ -795,6 +795,7 @@ async def corsSucks(request: web.Request) -> web.Response:
 
 
 @router.post("/users/{id}/password")
+@handle_json_error
 async def change_password(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
