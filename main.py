@@ -555,7 +555,7 @@ async def fetch_latest_meet(db: asyncpg.Connection):
 
 
 async def fetch_all_users(db: asyncpg.Connection):
-    rows = await db.fetch("SELECT username, name, email, permissions, active FROM users")
+    rows = await db.fetch("SELECT id, username, name, email, permissions, active FROM users")
     if not rows:
         raise NotFoundException(f"No users found!")
     users = []
