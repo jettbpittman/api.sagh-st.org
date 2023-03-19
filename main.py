@@ -776,7 +776,7 @@ async def change_password(request: web.Request) -> web.Response:
     new_password = info['new_password']
     db = request.config_dict['DB']
     ir = await db.fetchrow(
-        "SELECT password FROM users WHERE id = $1", id
+        "SELECT password FROM users WHERE id = $1", int(id)
     )
     if not argon2.verify(old_password, ir['password']):
         return web.json_response(
@@ -785,7 +785,7 @@ async def change_password(request: web.Request) -> web.Response:
     else:
         hashed = argon2.hash(new_password)
         await db.execute(
-            "UPDATE users SET password = $1 WHERE id = $2", hashed, id
+            "UPDATE users SET password = $1 WHERE id = $2", hashed, int(id)
         )
         return web.json_response(
             {"status": "ok", "reason": "password reset!"}
