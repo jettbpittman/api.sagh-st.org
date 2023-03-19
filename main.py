@@ -573,6 +573,20 @@ async def fetch_all_users(db: asyncpg.Connection):
     return users
 
 
+async def fetch_user(db: asyncpg.Connection, id: int):
+    row = await db.fetchrow("SELECT id, username, name, email, permissions, active FROM users WHERE id = $1", int(id))
+    if not row:
+        raise NotFoundException(f"No user found!")
+    return {
+                "id": row['id'],
+                "username": row["username"],
+                "name": row["name"],
+                "email": row["email"],
+                "permissions": row["permissions"],
+                "active": row["active"],
+            }
+
+
 def handle_json_error(
     func: Callable[[web.Request], Awaitable[web.Response]]
 ) -> Callable[[web.Request], Awaitable[web.Response]]:
@@ -713,6 +727,20 @@ async def get_all_user(request: web.Request) -> web.Response:
     return web.json_response(users)
 
 
+@router.get("/users/{id}")
+@handle_json_error
+async def get_user(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=0)
+    if a.status != 200:
+        return a
+    user_id = request.match_info['id']
+    if user_id == "me":
+        user_id = a.user_id
+    db = request.config_dict['DB']
+    user = await fetch_user(db, user_id)
+    return web.json_response(user)
+
+
 @router.patch("/users/{id}")
 @handle_json_error
 async def edit_user(request: web.Request) -> web.Response:
@@ -772,12 +800,10 @@ async def change_password(request: web.Request) -> web.Response:
     if a.status != 200:
         return a
     req_id = request.match_info['id']
-    auth = json.loads(a.body.decode())
-    print(auth)
-    if auth['user']['id'] != req_id:
+    if a.user_id != req_id:
         return web.json_response({"status": "failed", "reason": "forbidden"})
     info = await request.json()
-    id = a['id']
+    id = req_id
     old_password = info['old_password']
     new_password = info['new_password']
     db = request.config_dict['DB']
