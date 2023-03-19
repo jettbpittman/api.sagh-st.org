@@ -743,7 +743,7 @@ async def edit_user(request: web.Request) -> web.Response:
 
 @router.get("/users/all")
 @handle_json_error
-async def get_all_users(request: web.Request) -> web.Response:
+async def get_all_user(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=3)
     if a.status != 200:
         print("forbidden")
