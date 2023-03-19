@@ -608,24 +608,29 @@ async def auth_required(request: web.Request, permissions: int = 0):
     db = request.config_dict["DB"]
     r = await db.fetchrow("SELECT user_id FROM auth_tokens WHERE token = $1", str(token))
     if r is None:
-        return web.json_response(
+        resp = web.json_response(
             {"status": "unauthorized", "reason": "mismatched token"}, status=401
         )
+        return resp
     else:
         r2 = await db.fetchrow(
             "SELECT permissions FROM users WHERE id = $1", int(r["user_id"])
         )
         if permissions <= r2["permissions"]:
-            return web.json_response({"status": "ok", "id": r['user_id']})
+            resp = web.json_response({"status": "ok", "id": r['user_id']})
+            resp.user_id = r['user_id']
+            return resp
         else:
             print("forbidden")
-            return web.json_response(
+            resp = web.json_response(
                 {
                     "status": "forbidden",
                     "reason": f"you do not have sufficient permissions to access this endpoint! level {permissions} required, you have {r2['permissions']}",
                 },
                 status=403,
             )
+            resp.user_id = r['user_id']
+            return r
 
 
 def strip_token(token: str):
@@ -717,7 +722,7 @@ async def edit_user(request: web.Request) -> web.Response:
     user_id = request.match_info['id']
     fields = {}
     user = await request.json()
-    if a['id'] == user_id:
+    if a.user_id == user_id:
         pass
     elif (await auth_required(request, permissions=3)).status == 200:
         if "permissions" in user:
