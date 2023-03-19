@@ -562,6 +562,7 @@ async def fetch_all_users(db: asyncpg.Connection):
     for row in rows:
         users.append(
             {
+                "id": row['id'],
                 "username": row["username"],
                 "name": row["name"],
                 "email": row["email"],
