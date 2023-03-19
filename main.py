@@ -785,6 +785,11 @@ async def change_password(request: web.Request) -> web.Response:
             {"status": "ok", "reason": "password reset!"}
         )
 
+@router.get("/cors-is-so-annoying")
+@handle_json_error
+async def corsSucks(request: web.Request) -> web.Response:
+    return web.json_response({"message": "i bet you can't read this"})
+
 
 @router.post("/auth/login")
 @handle_json_error
