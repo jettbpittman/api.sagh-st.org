@@ -707,6 +707,8 @@ async def edit_users(request: web.Request) -> web.Response:
     elif (await auth_required(request, permissions=3)).status == 200:
         if "permissions" in user:
             fields['permissions'] = user['permissions']
+        if "active" in user:
+            fields['active'] = user['active']
     else:
         return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
     if "name" in user:
