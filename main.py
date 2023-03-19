@@ -617,6 +617,7 @@ async def auth_required(request: web.Request, permissions: int = 0):
         if permissions <= r2["permissions"]:
             return web.json_response({"status": "ok", "id": r['user_id']})
         else:
+            print("forbidden")
             return web.json_response(
                 {
                     "status": "forbidden",
@@ -695,7 +696,7 @@ async def create_user(request: web.Request) -> web.Response:
 
 @router.patch("/users/{id}")
 @handle_json_error
-async def edit_users(request: web.Request) -> web.Response:
+async def edit_user(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
