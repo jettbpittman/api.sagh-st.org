@@ -768,6 +768,7 @@ async def change_password(request: web.Request) -> web.Response:
     if a.status != 200:
         return a
     req_id = request.match_info['id']
+    print(a)
     if a['id'] != req_id:
         return web.json_response({"status": "failed", "reason": "forbidden"})
     info = await request.json()
