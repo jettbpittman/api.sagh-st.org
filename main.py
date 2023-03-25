@@ -330,7 +330,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
                 "swimmer": name,
                 "homeschool": s['homeschool'],
                 "meet": await fetch_meet(db, entry['meet']),
-                "event": ev,
+                "event": await fetch_event(db, entry['event']),
                 "seed": entry["seed"],
                 "time": entry["time"],
                 "splits": json.loads(entry["splits"]),
