@@ -5,7 +5,7 @@ import datetime
 import random
 import time
 
-FILE = "/home/hydro/Downloads/s234"
+FILE = "s234"
 MEET = 20239628042240
 TEAM = "SAGH"
 SHORTNAME = "GHMV"
@@ -66,15 +66,17 @@ def generate_id(id_type: int, year: int = 0, join_date: int = None) -> int:
     )
 
 
-def assemble_event_code(e):
+def assemble_event_code(e, split):
     code = ""
     if e["gender"] == "Gender.FEMALE":
         code += "F"
     if e["gender"] == "Gender.MALE":
         code += "M"
-    if e["relay"]:
+    if e["relay"] and split:
         dist = int(e["distance"] / 4)
         code += str(dist)
+    elif e['relay']:
+        code += str(e["distance"]) + "R"
     else:
         code += str(e["distance"])
     if e["stroke"] == "Stroke.FREESTYLE":
@@ -95,13 +97,14 @@ m = []
 
 for event in events:
     ev = events[event]
-    event_code = assemble_event_code(ev)
+    event_code = assemble_event_code(ev, False)
     for entry in ev["entries"]:
         try:
             if entry["swimmers"][0]["team_code"] == TEAM:
                 if entry["relay"]:
-                    if event_code[-1] == "M":
-                        lead_event_code = event_code[:-1] + "B"
+                    lead_event_code = assemble_event_code(ev, True)
+                    if lead_event_code[-1] == "M":
+                        lead_event_code = assemble_event_code(ev, True)[:-1] + "B"
                     lead_swimmer = entry["swimmers"][0]
                     swimmers = entry['swimmers']
                     lead_ptime = None
@@ -242,12 +245,12 @@ for result in m:
     pprint.pprint(result)
     splits = json.dumps(result["splits"])
     new_id = generate_id(3)
-    #cur.execute(
-    #    "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-    #    (new_id, id, MEET,
-    #     result["event"], result["seed"], result["time"], splits)
-    #)
-    #con.commit()
+    cur.execute(
+        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (new_id, id, MEET,
+         result["event"], result["seed"], result["time"], splits)
+    )
+    con.commit()
     if result['swimmers']:
         swimmers = []
         for swimmer in result['swimmers']:
@@ -257,6 +260,7 @@ for result in m:
             r = cur.fetchone()
             if r:
                 id = str(r[0])
+                swimmers.append(id)
             else:
                 c = cur.execute(
                     f"SELECT id FROM swimmers WHERE last_name = '{swimmer['last_name']}' AND first_name = '{swimmer['first_name']}'"
@@ -268,9 +272,9 @@ for result in m:
                 except TypeError:
                     print(f"Unable to locate {result['name']}")
                     continue
-        #cur.execute(
-        #    "INSERT INTO relays (entry, swimmer_1, swimmer_2, swimmer_3, swimmer_4) VALUES (%s, %s, %s, %s, %s)",
-        #    (result['swimmers'][0], result['swimmers'][1], result['swimmers'][2], result['swimmers'][3])
-        #)
-        #con.commit()
+        cur.execute(
+            "INSERT INTO relays (entry, swimmer_1, swimmer_2, swimmer_3, swimmer_4) VALUES (%s, %s, %s, %s, %s)",
+            (new_id, swimmers[0], swimmers[1], swimmers[2], swimmers[3])
+        )
+        con.commit()
     time.sleep(1)
