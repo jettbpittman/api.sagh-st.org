@@ -6,7 +6,7 @@ import random
 import time
 
 FILE = "s234"
-MEET = 20239628042240
+MEET = 21734651527168
 TEAM = "SAGH"
 SHORTNAME = "GHMV"
 
@@ -244,11 +244,15 @@ for result in m:
     pprint.pprint(f"{result['name']} - {id}")
     pprint.pprint(result)
     splits = json.dumps(result["splits"])
+    if result['swimmers']:
+        relay = True
+    else:
+        relay = False
     new_id = generate_id(3)
     cur.execute(
-        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits, relay) VALUES (%s, %s, %s, %s, %s, %s, %s)",
         (new_id, id, MEET,
-         result["event"], result["seed"], result["time"], splits)
+         result["event"], result["seed"], result["time"], splits, relay)
     )
     con.commit()
     if result['swimmers']:
