@@ -5,9 +5,10 @@ import datetime
 import random
 import time
 
-FILE = "285a2020"
+FILE = "/home/hydro/Downloads/s234"
 MEET = 20239628042240
 TEAM = "SAGH"
+SHORTNAME = "GHMV"
 
 with open(f"{FILE}.json", "r") as f:
     mm_json = json.load(f)
@@ -100,71 +101,98 @@ for event in events:
             if entry["swimmers"][0]["team_code"] == TEAM:
                 if entry["relay"]:
                     if event_code[-1] == "M":
-                        event_code = event_code[:-1] + "B"
-                    swimmer = entry["swimmers"][0]
-                    ptime = None
-                    ftime = None
+                        lead_event_code = event_code[:-1] + "B"
+                    lead_swimmer = entry["swimmers"][0]
+                    swimmers = entry['swimmers']
+                    lead_ptime = None
+                    lead_ftime = None
                     if entry["prelim_splits"]:
-                        splits = list(entry["prelim_splits"].values())
-                        splits.sort()
-                        print(splits)
+                        psplits = list(entry["prelim_splits"].values())
+                        psplits.sort()
+                        print(psplits)
                         if ev["distance"] == 200:
-                            ptime = splits[0]
-                            psplits = []
+                            lead_ptime = psplits[0]
+                            lead_psplits = []
                         if ev["distance"] == 400:
-                            ptime = splits[1]
-                            psplits = [splits[0], splits[1]]
+                            lead_ptime = psplits[1]
+                            lead_psplits = [psplits[0], psplits[1]]
                         if ev["distance"] == 800:
-                            ptime = splits[3]
-                            psplits = [splits[0], splits[1], splits[2], splits[3]]
+                            lead_ptime = psplits[3]
+                            lead_psplits = [psplits[0], psplits[1], psplits[2], psplits[3]]
+                        ptime = entry['prelim_time']
                     if entry["finals_splits"]:
-                        splits = list(entry["finals_splits"].values())
-                        splits.sort()
-                        print(splits)
+                        fsplits = list(entry["finals_splits"].values())
+                        fsplits.sort()
+                        print(fsplits)
                         if ev["distance"] == 200:
-                            ftime = splits[0]
-                            fsplits = []
+                            lead_ftime = fsplits[0]
+                            lead_fsplits = []
                         if ev["distance"] == 400:
-                            ftime = splits[1]
-                            fsplits = [splits[0], splits[1]]
+                            lead_ftime = fsplits[1]
+                            lead_fsplits = [fsplits[0], fsplits[1]]
                         if ev["distance"] == 800:
-                            ftime = splits[3]
-                            fsplits = [splits[0], splits[1], splits[2], splits[3]]
-                    if ptime:
+                            lead_ftime = fsplits[3]
+                            lead_fsplits = [fsplits[0], fsplits[1], fsplits[2], fsplits[3]]
+                        ftime = entry['finals_time']
+                    if lead_ptime:
                         m.append(
                             {
-                                "name": f"{swimmer['last_name']}, {swimmer['first_name']}",
-                                "usa_swimming_id": swimmer["usa_swimming_id"],
-                                "event": event_code,
+                                "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']}",
+                                "usa_swimming_id": lead_swimmer["usa_swimming_id"],
+                                "event": lead_event_code,
                                 "seed": "RELAY_LEADOFF",
-                                "time": format_time(ptime),
-                                "splits": psplits,
-                            }
-                        )
-                    if ftime:
+                                "time": format_time(lead_ptime),
+                                "splits": lead_psplits,
+                                "swimmers": None
+                            })
+                        m.append({
+                            "name": f"{SHORTNAME}, {entry['relay_team_id']}",
+                            "usa_swimming_id": "",
+                            "event": event_code,
+                            "seed": entry['seed_time'],
+                            "time": format_time(ptime),
+                            "splits": psplits,
+                            "swimmers": swimmers
+                        })
+                    if lead_ftime:
                         m.append(
                             {
-                                "name": f"{swimmer['last_name']}, {swimmer['first_name']}",
-                                "usa_swimming_id": swimmer["usa_swimming_id"],
-                                "event": event_code,
+                                "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']}",
+                                "usa_swimming_id": lead_swimmer["usa_swimming_id"],
+                                "event": lead_event_code,
                                 "seed": "RELAY_LEADOFF",
-                                "time": format_time(ftime),
-                                "splits": fsplits,
+                                "time": format_time(lead_ftime),
+                                "splits": lead_fsplits,
+                                "swimmers": None
                             }
                         )
+                        if entry["prelim_time"]:
+                            seed = entry["prelim_time"]
+                        else:
+                            seed = entry["seed_time"]
+                        m.append({
+                            "name": f"{SHORTNAME}, {entry['relay_team_id']}",
+                            "event": event_code,
+                            "usa_swimming_id": "",
+                            "seed": seed,
+                            "time": format_time(ftime),
+                            "splits": fsplits,
+                            "swimmers": swimmers
+                        })
                 else:
-                    swimmer = entry["swimmers"][0]
+                    lead_swimmer = entry["swimmers"][0]
                     if entry["prelim_time"]:
-                        splits = list(entry["prelim_splits"].values())
-                        splits.sort()
+                        psplits = list(entry["prelim_splits"].values())
+                        psplits.sort()
                         m.append(
                             {
-                                "name": f"{swimmer['last_name']}, {swimmer['first_name']}",
-                                "usa_swimming_id": swimmer["usa_swimming_id"],
+                                "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']}",
+                                "usa_swimming_id": lead_swimmer["usa_swimming_id"],
                                 "event": event_code,
                                 "seed": format_time(entry["seed_time"]),
                                 "time": format_time(entry["prelim_time"]),
-                                "splits": splits,
+                                "splits": psplits,
+                                "swimmers": None
                             }
                         )
                     if entry["finals_time"]:
@@ -172,16 +200,17 @@ for event in events:
                             seed = entry["prelim_time"]
                         else:
                             seed = entry["seed_time"]
-                        splits = list(entry["finals_splits"].values())
-                        splits.sort()
+                        psplits = list(entry["finals_splits"].values())
+                        psplits.sort()
                         m.append(
                             {
-                                "name": f"{swimmer['last_name']}, {swimmer['first_name']}",
-                                "usa_swimming_id": swimmer["usa_swimming_id"],
+                                "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']}",
+                                "usa_swimming_id": lead_swimmer["usa_swimming_id"],
                                 "event": event_code,
                                 "seed": format_time(seed),
                                 "time": format_time(entry["finals_time"]),
-                                "splits": splits,
+                                "splits": psplits,
+                                "swimmers": None
                             }
                         )
             else:
@@ -212,10 +241,36 @@ for result in m:
     pprint.pprint(f"{result['name']} - {id}")
     pprint.pprint(result)
     splits = json.dumps(result["splits"])
-    cur.execute(
-        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        (generate_id(3), id, MEET,
-         result["event"], result["seed"], result["time"], splits)
-    )
-    con.commit()
+    new_id = generate_id(3)
+    #cur.execute(
+    #    "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+    #    (new_id, id, MEET,
+    #     result["event"], result["seed"], result["time"], splits)
+    #)
+    #con.commit()
+    if result['swimmers']:
+        swimmers = []
+        for swimmer in result['swimmers']:
+            c = cur.execute(
+                f"SELECT id FROM swimmers WHERE usas_id = '{swimmer['usa_swimming_id']}'"
+            )
+            r = cur.fetchone()
+            if r:
+                id = str(r[0])
+            else:
+                c = cur.execute(
+                    f"SELECT id FROM swimmers WHERE last_name = '{swimmer['last_name']}' AND first_name = '{swimmer['first_name']}'"
+                )
+                r = cur.fetchone()
+                try:
+                    id = str(r[0])
+                    swimmers.append(id)
+                except TypeError:
+                    print(f"Unable to locate {result['name']}")
+                    continue
+        #cur.execute(
+        #    "INSERT INTO relays (entry, swimmer_1, swimmer_2, swimmer_3, swimmer_4) VALUES (%s, %s, %s, %s, %s)",
+        #    (result['swimmers'][0], result['swimmers'][1], result['swimmers'][2], result['swimmers'][3])
+        #)
+        #con.commit()
     time.sleep(1)
