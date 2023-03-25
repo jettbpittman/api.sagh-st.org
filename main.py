@@ -327,7 +327,6 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
             s = await fetch_swimmer(db, entry["swimmer"])
             name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
             x = {
-                "id": entry["id"],
                 "swimmer": name,
                 "homeschool": s['homeschool'],
                 "meet": await fetch_meet(db, entry['meet']),
@@ -349,6 +348,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
             obj["entries"].append(x)
         obj["entries"].sort(key=sortByTime)
         entries.append(obj)
+    pprint.pprint(entries)
     return entries
 
 
