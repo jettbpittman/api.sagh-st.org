@@ -161,13 +161,16 @@ async def fetch_entry_lite(db: asyncpg.Connection, id: int):
         "relay": None,
     }
     if row['relay']:
-        swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(id))
-        resp['relay'] = {
-            "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-            "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-            "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-            "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
-        }
+        try:
+            swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(id))
+            resp['relay'] = {
+                "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
+                "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
+                "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
+                "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+            }
+        except:
+            pass
     return resp
 
 
@@ -202,13 +205,16 @@ async def fetch_event_all_entries(db: asyncpg.Connection, id: str):
             "relay": None,
         }
         if entry['relay']:
-            swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
-            e['relay'] = {
-                "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-                "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-                "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-                "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
-            }
+            try:
+                swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
+                e['relay'] = {
+                    "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
+                    "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
+                    "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
+                    "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+                }
+            except:
+                pass
         entries.append(e)
     return entries
 
@@ -240,13 +246,16 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str):
             "relay": None,
         }
         if entry['relay']:
-            swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
-            e['relay'] = {
-                "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-                "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-                "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-                "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
-            }
+            try:
+                swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
+                e['relay'] = {
+                    "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
+                    "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
+                    "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
+                    "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+                }
+            except:
+                pass
         if e['homeschool']:
             continue
         entries.append(e)
@@ -290,13 +299,16 @@ async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
                 "relay": None,
             }
             if entry['relay']:
-                swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
-                e['relay'] = {
-                    "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-                    "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-                    "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-                    "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
-                }
+                try:
+                    swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
+                    e['relay'] = {
+                        "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
+                        "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
+                        "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
+                        "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+                    }
+                except:
+                    pass
             try:
                 entries[entry["event"]].append(e)
             except KeyError:
@@ -341,13 +353,16 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
                 "relay": None,
             }
             if entry['relay']:
-                swimmers = await db.fetchrow("SELECT swimmer_1, swimmer_2, swimmer_3, swimmer_4 FROM relays WHERE entry = $1", int(entry['id']))
-                x['relay'] = {
-                    "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-                    "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-                    "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-                    "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
-                }
+                try:
+                    swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
+                    x['relay'] = {
+                        "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
+                        "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
+                        "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
+                        "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+                    }
+                except:
+                    pass
             obj["entries"].append(x)
         obj["entries"].sort(key=sortByTime)
         entries.append(obj)
