@@ -133,13 +133,16 @@ async def fetch_entry(db: asyncpg.Connection, id: int):
         "relay": None,
     }
     if row['relay']:
-        swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(id))
-        resp['relay'] = {
-            "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-            "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-            "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-            "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
-        }
+        try:
+            swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(id))
+            resp['relay'] = {
+                "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
+                "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
+                "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
+                "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+            }
+        except:
+            pass
     return resp
 
 
