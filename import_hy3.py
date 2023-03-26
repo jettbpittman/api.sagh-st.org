@@ -122,7 +122,7 @@ for event in events:
                         if ev["distance"] == 800:
                             lead_ptime = psplits[3]
                             lead_psplits = [psplits[0], psplits[1], psplits[2], psplits[3]]
-                        ptime = entry['prelim_time']
+                        ptime = format_time(entry['prelim_time'])
                     if entry["finals_splits"]:
                         fsplits = list(entry["finals_splits"].values())
                         fsplits.sort()
@@ -136,7 +136,7 @@ for event in events:
                         if ev["distance"] == 800:
                             lead_ftime = fsplits[3]
                             lead_fsplits = [fsplits[0], fsplits[1], fsplits[2], fsplits[3]]
-                        ftime = entry['finals_time']
+                        ftime = format_time(entry['finals_time'])
                     if lead_ptime:
                         m.append(
                             {
@@ -152,8 +152,8 @@ for event in events:
                             "name": f"{SHORTNAME}, {entry['relay_team_id']}",
                             "usa_swimming_id": "",
                             "event": event_code,
-                            "seed": entry['seed_time'],
-                            "time": format_time(ptime),
+                            "seed": format_time(entry['seed_time']),
+                            "time": ptime,
                             "splits": psplits,
                             "swimmers": swimmers
                         })
@@ -170,15 +170,15 @@ for event in events:
                             }
                         )
                         if entry["prelim_time"]:
-                            seed = entry["prelim_time"]
+                            seed = format_time(entry["prelim_time"])
                         else:
-                            seed = entry["seed_time"]
+                            seed = format_time(entry["seed_time"])
                         m.append({
                             "name": f"{SHORTNAME}, {entry['relay_team_id']}",
                             "event": event_code,
                             "usa_swimming_id": "",
                             "seed": seed,
-                            "time": format_time(ftime),
+                            "time": ftime,
                             "splits": fsplits,
                             "swimmers": swimmers
                         })
@@ -200,9 +200,9 @@ for event in events:
                         )
                     if entry["finals_time"]:
                         if entry["prelim_time"]:
-                            seed = entry["prelim_time"]
+                            seed = format_time(entry["prelim_time"])
                         else:
-                            seed = entry["seed_time"]
+                            seed = format_time(entry["seed_time"])
                         psplits = list(entry["finals_splits"].values())
                         psplits.sort()
                         m.append(
@@ -210,7 +210,7 @@ for event in events:
                                 "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']}",
                                 "usa_swimming_id": lead_swimmer["usa_swimming_id"],
                                 "event": event_code,
-                                "seed": format_time(seed),
+                                "seed": seed,
                                 "time": format_time(entry["finals_time"]),
                                 "splits": psplits,
                                 "swimmers": None
@@ -248,9 +248,10 @@ for result in m:
         relay = True
     else:
         relay = False
+    print(relay)
     new_id = generate_id(3)
     cur.execute(
-        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits, relay) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits, relay) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
         (new_id, id, MEET,
          result["event"], result["seed"], result["time"], splits, relay)
     )
