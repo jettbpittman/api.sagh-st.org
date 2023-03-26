@@ -277,9 +277,12 @@ for result in m:
                 except TypeError:
                     print(f"Unable to locate {result['name']}")
                     continue
-        cur.execute(
-            "INSERT INTO relays (entry, swimmer_1, swimmer_2, swimmer_3, swimmer_4) VALUES (%s, %s, %s, %s, %s)",
-            (new_id, swimmers[0], swimmers[1], swimmers[2], swimmers[3])
-        )
-        con.commit()
+        try:
+            cur.execute(
+                "INSERT INTO relays (entry, swimmer_1, swimmer_2, swimmer_3, swimmer_4) VALUES (%s, %s, %s, %s, %s)",
+                (new_id, swimmers[0], swimmers[1], swimmers[2], swimmers[3])
+            )
+            con.commit()
+        except:
+            pass
     time.sleep(1)
