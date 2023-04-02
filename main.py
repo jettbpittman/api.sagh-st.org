@@ -806,8 +806,12 @@ async def get_user(request: web.Request) -> web.Response:
     if a.status != 200:
         return a
     user_id = request.match_info['id']
-    if user_id == "me":
+    if user_id == "me" or user_id == a.user_id:
         user_id = a.user_id
+    elif (await auth_required(request, permissions=3)).status == 200:
+        pass
+    else:
+        return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
     db = request.config_dict['DB']
     user = await fetch_user(db, user_id)
     return web.json_response(user)
@@ -875,7 +879,7 @@ async def change_password(request: web.Request) -> web.Response:
     req_id = request.match_info['id']
     if int(a.user_id) != int(req_id):
         return web.json_response({"status": "failed", "reason": f"forbidden - your ID is {a.user_id} while you are "
-                                                                f"trying to access {req_id}"})
+                                                                f"trying to access {req_id}"}, status=403)
     info = await request.json()
     id = req_id
     old_password = info['old_password']
@@ -1029,7 +1033,7 @@ async def edit_swimmer(request: web.Request) -> web.Response:
 @router.patch("/class/{id}/active")
 @handle_json_error
 async def change_class_status(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=1)
+    a = await auth_required(request, permissions=2)
     if a.status != 200:
         return a
     class_id = request.match_info['id']
@@ -1371,7 +1375,7 @@ async def get_all_top5(request: web.Request) -> web.Response:
 
 @router.get("/top5/update")
 async def get_all_top5(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=2)
+    a = await auth_required(request, permissions=3)
     if a.status != 200:
         return a
     db = request.config_dict["DB"]
