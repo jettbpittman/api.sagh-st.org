@@ -950,7 +950,10 @@ async def create_swimmer(request: web.Request) -> web.Response:
     year = info["class"]
     team = info["team"]
     gender = info["gender"]
-    dob = info['dob']
+    if "dob" in info:
+        dob = info['dob']
+    else:
+        dob = None
     if "join_date" in info:
         join_date = info["join_date"]
         id = generate_id(1, year, join_date)
