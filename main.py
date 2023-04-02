@@ -239,6 +239,7 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str):
             "swimmer_id": s['id'],
             "homeschool": s['homeschool'],
             "meet": m,
+            "season": m['season'],
             "event": await fetch_event(db, entry["event"]),
             "seed": entry["seed"],
             "time": entry["time"],
