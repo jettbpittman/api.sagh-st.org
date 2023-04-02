@@ -236,6 +236,7 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str):
         e = {
             "id": entry["id"],
             "swimmer": name,
+            "swimmer_id": s['id'],
             "homeschool": s['homeschool'],
             "meet": m,
             "event": await fetch_event(db, entry["event"]),
@@ -263,10 +264,10 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str):
     swimmers = []
     top5 = []
     for entry in entries:
-        if entry["swim_id"] in swimmers:
+        if entry["swimmer_id"] in swimmers:
             continue
         else:
-            swimmers.append(entry["swim_id"])
+            swimmers.append(entry["swimmer_id"])
             top5.append(entry)
     return top5[:5]
 
