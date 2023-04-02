@@ -965,7 +965,7 @@ async def create_swimmer(request: web.Request) -> web.Response:
         active = True
     db = request.config_dict["DB"]
     await db.execute(
-        "INSERT INTO swimmers (id, first_name, last_name, middle_name, age, class, team, active, gender) VALUES($1, $2, "
+        "INSERT INTO swimmers (id, first_name, last_name, middle_name, class, team, active, gender, dob) VALUES($1, $2, "
         "$3, $4, $5, $6, $7, $8, $9)",
         id,
         first_name,
