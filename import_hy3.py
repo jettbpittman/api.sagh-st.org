@@ -258,11 +258,11 @@ for result in m:
         relay = False
     print(relay)
     new_id = generate_id(3)
-    #cur.execute(
-    #    "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits, relay) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-    #    (new_id, id, MEET,
-    #     result["event"], result["seed"], result["time"], splits, relay)
-    #)
+    cur.execute(
+        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits, relay) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        (new_id, id, MEET,
+         result["event"], result["seed"], result["time"], splits, relay)
+    )
     #con.commit()
     if result['swimmers']:
         swimmers = []
@@ -286,12 +286,11 @@ for result in m:
                     print(f"Unable to locate {result['name']}")
                     continue
         try:
-            #cur.execute(
-            #    "INSERT INTO relays (entry, swimmer_1, swimmer_2, swimmer_3, swimmer_4) VALUES (%s, %s, %s, %s, %s)",
-            #    (new_id, swimmers[0], swimmers[1], swimmers[2], swimmers[3])
-            #)
-            #con.commit()
-            mnmgnjkds = 0
+            cur.execute(
+                "INSERT INTO relays (entry, swimmer_1, swimmer_2, swimmer_3, swimmer_4) VALUES (%s, %s, %s, %s, %s)",
+                (new_id, swimmers[0], swimmers[1], swimmers[2], swimmers[3])
+            )
+            con.commit()
         except:
             pass
     time.sleep(1)
