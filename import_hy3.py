@@ -5,8 +5,8 @@ import datetime
 import random
 import time
 
-FILE = "s234"
-MEET = 21734651527168
+FILE = "r85a"
+MEET = 21274392002560
 TEAM = "SAGH"
 SHORTNAME = "GHMV"
 
@@ -92,7 +92,7 @@ def assemble_event_code(e, split):
     return code
 
 
-events = mm_json["events"]
+events = mm_json["meet"]["events"]
 m = []
 
 for event in events:
@@ -138,6 +138,8 @@ for event in events:
                             lead_fsplits = [fsplits[0], fsplits[1], fsplits[2], fsplits[3]]
                         ftime = format_time(entry['finals_time'])
                     if lead_ptime:
+                        if entry["prelim_time_code"] == "WithTimeTimeCode.DISQUALIFICATION":
+                            continue
                         m.append(
                             {
                                 "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']}",
@@ -158,6 +160,8 @@ for event in events:
                             "swimmers": swimmers
                         })
                     if lead_ftime:
+                        if entry["finals_time_code"] == "WithTimeTimeCode.DISQUALIFICATION":
+                            continue
                         m.append(
                             {
                                 "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']}",
@@ -185,6 +189,8 @@ for event in events:
                 else:
                     lead_swimmer = entry["swimmers"][0]
                     if entry["prelim_time"]:
+                        if entry["prelim_time_code"] == "WithTimeTimeCode.DISQUALIFICATION":
+                            continue
                         psplits = list(entry["prelim_splits"].values())
                         psplits.sort()
                         m.append(
@@ -199,6 +205,8 @@ for event in events:
                             }
                         )
                     if entry["finals_time"]:
+                        if entry["finals_time_code"] == "WithTimeTimeCode.DISQUALIFICATION":
+                            continue
                         if entry["prelim_time"]:
                             seed = format_time(entry["prelim_time"])
                         else:
@@ -250,12 +258,12 @@ for result in m:
         relay = False
     print(relay)
     new_id = generate_id(3)
-    cur.execute(
-        "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits, relay) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-        (new_id, id, MEET,
-         result["event"], result["seed"], result["time"], splits, relay)
-    )
-    con.commit()
+    #cur.execute(
+    #    "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits, relay) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+    #    (new_id, id, MEET,
+    #     result["event"], result["seed"], result["time"], splits, relay)
+    #)
+    #con.commit()
     if result['swimmers']:
         swimmers = []
         for swimmer in result['swimmers']:
@@ -278,11 +286,12 @@ for result in m:
                     print(f"Unable to locate {result['name']}")
                     continue
         try:
-            cur.execute(
-                "INSERT INTO relays (entry, swimmer_1, swimmer_2, swimmer_3, swimmer_4) VALUES (%s, %s, %s, %s, %s)",
-                (new_id, swimmers[0], swimmers[1], swimmers[2], swimmers[3])
-            )
-            con.commit()
+            #cur.execute(
+            #    "INSERT INTO relays (entry, swimmer_1, swimmer_2, swimmer_3, swimmer_4) VALUES (%s, %s, %s, %s, %s)",
+            #    (new_id, swimmers[0], swimmers[1], swimmers[2], swimmers[3])
+            #)
+            #con.commit()
+            mnmgnjkds = 0
         except:
             pass
     time.sleep(1)
