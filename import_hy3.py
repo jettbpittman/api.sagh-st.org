@@ -263,7 +263,7 @@ for result in m:
         (new_id, id, MEET,
          result["event"], result["seed"], result["time"], splits, relay)
     )
-    #con.commit()
+    con.commit()
     if result['swimmers']:
         swimmers = []
         for swimmer in result['swimmers']:
