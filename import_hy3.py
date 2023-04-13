@@ -145,7 +145,7 @@ for event in events:
                                 "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']}",
                                 "usa_swimming_id": lead_swimmer["usa_swimming_id"],
                                 "event": lead_event_code,
-                                "seed": "RELAY_LEADOFF",
+                                "seed": "RL",
                                 "time": format_time(lead_ptime),
                                 "splits": lead_psplits,
                                 "swimmers": None
@@ -167,7 +167,7 @@ for event in events:
                                 "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']}",
                                 "usa_swimming_id": lead_swimmer["usa_swimming_id"],
                                 "event": lead_event_code,
-                                "seed": "RELAY_LEADOFF",
+                                "seed": "RL",
                                 "time": format_time(lead_ftime),
                                 "splits": lead_fsplits,
                                 "swimmers": None
