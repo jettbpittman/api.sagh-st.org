@@ -651,7 +651,7 @@ async def fetch_all_users(db: asyncpg.Connection):
 
 
 async def fetch_user(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT id, username, name, email, permissions, active FROM users WHERE id = $1", int(id))
+    row = await db.fetchrow("SELECT id, username, name, email, permissions, active, linked_swimmer FROM users WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"No user found!")
     return {
@@ -661,6 +661,7 @@ async def fetch_user(db: asyncpg.Connection, id: int):
                 "email": row["email"],
                 "permissions": row["permissions"],
                 "active": row["active"],
+                "linked_swimmer": row['linked_swimmer'],
             }
 
 
