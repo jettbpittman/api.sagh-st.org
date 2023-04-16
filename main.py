@@ -427,7 +427,7 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
         "stats": {
             "entries": entries[0],
             "meet_count": len(meets),
-            "meets": json.dumps([dict(record) for record in meets])
+            "meets": json.dumps([record for record in meets])
         }
     }
 
