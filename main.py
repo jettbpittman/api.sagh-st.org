@@ -421,7 +421,10 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
         "team": await fetch_team(db, row["team"]),
         "active": row["active"],
         "homeschool": row['homeschool'],
-        "dob": row['dob']
+        "dob": row['dob'],
+        "stats": {
+            "entries": (await db.fetchrow("SELECT count(*) FROM entries WHERE swimmer = $1", int(id)))
+        }
     }
 
 
@@ -557,7 +560,10 @@ async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
         "class": row["class"],
         "active": row["active"],
         "homeschool": row['homeschool'],
-        "dob": row['dob']
+        "dob": row['dob'],
+        "stats": {
+            "entries": (await db.fetchrow("SELECT count(*) FROM entries WHERE swimmer = $1", int(id)))
+        }
     }
 
 
