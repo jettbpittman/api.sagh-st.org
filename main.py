@@ -297,6 +297,7 @@ async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
                 "seed": entry["seed"],
                 "time": entry["time"],
                 "season": m["season"],
+                "splits": json.loads(entry['splits']),
                 "standards": await fetch_standard(db, entry["standards"]),
                 "relay": None,
             }
