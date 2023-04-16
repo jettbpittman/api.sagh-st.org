@@ -739,7 +739,7 @@ async def auth_check(request: web.Request) -> web.Response:
     token = strip_token(request.headers["token"])
     db = request.config_dict["DB"]
     r = await db.fetchrow(
-        "SELECT name, username, email, permissions, active FROM users WHERE id = $1",
+        "SELECT name, username, email, permissions, active, linked_swimmer FROM users WHERE id = $1",
         int(token["user_id"]),
     )
     if r['active'] is False:
@@ -753,6 +753,7 @@ async def auth_check(request: web.Request) -> web.Response:
                 "username": r["username"],
                 "email": r["email"],
                 "permissions": r["permissions"],
+                "linked_swimmer": r['linked_swimmer']
             },
         }
     )
