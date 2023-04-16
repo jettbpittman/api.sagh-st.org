@@ -408,7 +408,7 @@ async def fetch_team(db: asyncpg.Connection, id: str):
 
 async def fetch_swimmer(db: asyncpg.Connection, id: int):
     entries = await db.fetchrow("SELECT count(*) FROM entries WHERE swimmer = $1", int(id))
-    meets = await db.fetchrow("SELECT count( DISTINCT meet) FROM entries WHERE swimmer = $1", int(id))
+    meets = await db.fetch("SELECT DISTINCT meet FROM entries WHERE swimmer = $1", int(id))
     row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"Swimmer {id} does not exist!")
@@ -426,7 +426,7 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
         "dob": row['dob'],
         "stats": {
             "entries": entries[0],
-            "meets": meets[0]
+            "meets": len(meets)
         }
     }
 
