@@ -426,7 +426,8 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
         "dob": row['dob'],
         "stats": {
             "entries": entries[0],
-            "meets": len(meets)
+            "meet_count": len(meets),
+            "meets": meets
         }
     }
 
