@@ -548,6 +548,7 @@ async def fetch_swimmer_entries_event(db: asyncpg.Connection, id: int, event: st
 
 
 async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
+    entries = await db.fetchrow("SELECT count(*) FROM entries WHERE swimmer = $1", int(id))
     row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"Swimmer {id} does not exist!")
@@ -563,7 +564,7 @@ async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
         "homeschool": row['homeschool'],
         "dob": row['dob'],
         "stats": {
-            "entries": (await db.fetchrow("SELECT count(*) FROM entries WHERE swimmer = $1", int(id)))
+            "entries": entries[0]
         }
     }
 
