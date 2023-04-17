@@ -754,6 +754,8 @@ async def auth_check(request: web.Request) -> web.Response:
         "SELECT name, username, email, permissions, active, linked_swimmer FROM users WHERE id = $1",
         int(token["user_id"]),
     )
+    ts = datetime.datetime.now().isoformat()
+    await db.execute("UPDATE users SET latest_access = $1 WHERE id = $2", str(ts), int(token["user_id"]))
     if r['active'] is False:
         return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
     return web.json_response(
