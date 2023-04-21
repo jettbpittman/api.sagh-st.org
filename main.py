@@ -1,3 +1,4 @@
+import aiosqlite
 import asyncio
 import datetime
 import json
@@ -231,7 +232,19 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str):
         except IndexError:
             pass
         s = await fetch_swimmer(db, entry["swimmer"])
-        name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+        if entry['relay']:
+            try:
+                swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
+                s_list = [swimmers["swimmer_1"], swimmers["swimmer_2"], swimmers["swimmer_3"], swimmers["swimmer_4"]]
+                name = ""
+                for swimmer_id in s_list:
+                    swimmer = await fetch_swimmer_lite(db, swimmer_id)
+                    name += f", {swimmer['first_name'][0]} {swimmer['last_name']}"
+                name = name.strip()[2:]
+            except:
+                pass
+        else:
+            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
         m = await fetch_meet(db, entry["meet"])
         e = {
             "id": entry["id"],
@@ -263,9 +276,16 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str):
         entries.append(e)
     entries.sort(key=top5Sort)
     swimmers = []
+    relayers = []
     top5 = []
     for entry in entries:
-        if entry["swimmer_id"] in swimmers:
+        if entry['relay']:
+            if entry['relay'] in relayers:
+                continue
+            else:
+                relayers.append(entry['relay'])
+                top5.append(entry)
+        elif entry["swimmer_id"] in swimmers:
             continue
         else:
             swimmers.append(entry["swimmer_id"])
@@ -1330,7 +1350,7 @@ async def get_event_top5(request: web.Request) -> web.Response:
 
 
 async def fetch_all_top5(db):
-    events = ["200F", "200M", "50F", "100L", "100F", "500F", "100B", "100S"]
+    events = ["200F", "200M", "50F", "100L", "100F", "500F", "100B", "100S", "200RM", "200RF", "400RF"]
     headers = [
         "Place",
         "Name",
