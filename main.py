@@ -47,6 +47,11 @@ def sortByTime(e):
 
 
 def get_event_name(e):
+    if e[-2] == "R":
+        if e[-1] == "F":
+            return f"{e[:-1]} Freestyle Relay"
+        if e[-1] == "M":
+            return f"{e[:-1]} Medley Relay"
     if e[-1] == "F":
         return f"{e[:-1]} Freestyle"
     if e[-1] == "M":
@@ -57,6 +62,7 @@ def get_event_name(e):
         return f"{e[:-1]} Breaststroke"
     if e[-1] == "L":
         return f"{e[:-1]} Butterfly"
+
 
 
 def generate_id(id_type: int, year: int = 0, join_date: int = None) -> int:
