@@ -49,9 +49,9 @@ def sortByTime(e):
 def get_event_name(e):
     if e[-2] == "R":
         if e[-1] == "F":
-            return f"{e[:-1]} Freestyle Relay"
+            return f"{e[:-2]} Freestyle Relay"
         if e[-1] == "M":
-            return f"{e[:-1]} Medley Relay"
+            return f"{e[:-2]} Medley Relay"
     if e[-1] == "F":
         return f"{e[:-1]} Freestyle"
     if e[-1] == "M":
