@@ -244,7 +244,7 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str):
             except:
                 pass
         else:
-            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+            name = f"{s['first_name']} {s['last_name']}".strip()
         m = await fetch_meet(db, entry["meet"])
         e = {
             "id": entry["id"],
@@ -1368,10 +1368,8 @@ async def fetch_all_top5(db):
         f_entries = await fetch_event_top_five(db, f"F{event}")
         counter = 1
         while counter <= 5:
-            f_swimmer_name = re.split(",| ", f_entries[counter - 1]["swimmer"])
-            f_name = f"{f_swimmer_name[2]} {f_swimmer_name[0]}"
-            m_swimmer_name = re.split(",| ", m_entries[counter - 1]["swimmer"])
-            m_name = f"{m_swimmer_name[2]} {m_swimmer_name[0]}"
+            f_name = f_entries[counter - 1]["swimmer"]
+            m_name = m_entries[counter - 1]["swimmer"]
             if counter == 1:
                 row = [
                     counter,
