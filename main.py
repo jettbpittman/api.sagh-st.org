@@ -759,7 +759,7 @@ async def auth_required(request: web.Request, permissions: int = 0):
                 status=403,
             )
             resp.user_id = r['user_id']
-            return r
+            return resp
 
 
 def strip_token(token: str):
