@@ -670,7 +670,7 @@ async def fetch_latest_meet(db: asyncpg.Connection):
 
 
 async def fetch_all_users(db: asyncpg.Connection):
-    rows = await db.fetch("SELECT id, username, name, email, permissions, active FROM users")
+    rows = await db.fetch("SELECT id, username, name, email, permissions, active, linked_swimmer FROM users")
     if not rows:
         raise NotFoundException(f"No users found!")
     users = []
@@ -682,6 +682,7 @@ async def fetch_all_users(db: asyncpg.Connection):
                 "name": row["name"],
                 "email": row["email"],
                 "permissions": row["permissions"],
+                "linked_swimmer": row['linked_swimmer'],
                 "active": row["active"],
             }
         )
