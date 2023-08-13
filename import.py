@@ -659,7 +659,7 @@ if "--text" or "--html" in sys.argv:
                 p = f.read()
                 f.close()
             with open(f"{name}.html", "w") as f:
-                f.write(f"<h2>{mm_json['meet']['name']}</h2>\n" + p)
+                f.write(p)
                 f.close()
     else:
         for ev in e:
