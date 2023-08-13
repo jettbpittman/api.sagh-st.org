@@ -66,7 +66,7 @@ def stroke(s, r):
         return "Medley"
 
 
-def timeState(d):
+def timeStateTF(d):
     if d["dq_info"]:
         return "DQ"
     if d['time_code'] == "WithTimeTimeCode.NO_SHOW":
