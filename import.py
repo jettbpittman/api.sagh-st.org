@@ -67,9 +67,9 @@ def stroke(s, r):
 
 
 def timeStateTF(d):
-    if d["dq_info"]:
+    if d["finals_dq_info"]:
         return "DQ"
-    if d['time_code'] == "WithTimeTimeCode.NO_SHOW":
+    if d['finals_time_code'] == "WithTimeTimeCode.NO_SHOW":
         return "NS"
     else:
         return d['finals_time']
