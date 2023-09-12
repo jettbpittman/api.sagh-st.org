@@ -1479,7 +1479,7 @@ async def get_all_top5(request: web.Request) -> web.Response:
 @router.get("/top5-unofficial")
 async def get_all_top5(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
-    return web.Response(body=await fetch_all_top5(db))
+    return web.Response(body=await fetch_all_top5_unofficial(db))
 
 
 @router.get("/top5/update")
