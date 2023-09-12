@@ -226,7 +226,7 @@ async def fetch_event_all_entries(db: asyncpg.Connection, id: str):
     return entries
 
 
-async def fetch_event_top_five(db: asyncpg.Connection, id: str):
+async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
     rows = await db.fetch("SELECT * FROM entries WHERE event = $1", str(id))
     if not rows:
         raise NotFoundException(f"Event {id} does not exist!")
@@ -277,7 +277,7 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str):
                 }
             except:
                 pass
-        if e['homeschool']:
+        if e['homeschool'] and official:
             continue
         entries.append(e)
     entries.sort(key=top5Sort)
@@ -1413,7 +1413,70 @@ async def fetch_all_top5(db):
     )
 
 
+async def fetch_all_top5_unofficial(db):
+    events = ["200F", "200M", "50F", "100L", "100F", "500F", "100B", "100S", "200RM", "200RF", "400RF"]
+    headers = [
+        "Place",
+        "Name",
+        "Time",
+        "Year",
+        "Event",
+        "Year",
+        "Time",
+        "Name",
+        "Place",
+    ]
+    table = []
+    for event in events:
+        m_entries = await fetch_event_top_five(db, f"M{event}", official=False)
+        f_entries = await fetch_event_top_five(db, f"F{event}", official=False)
+        counter = 1
+        while counter <= 5:
+            f_name = f_entries[counter - 1]["swimmer"]
+            m_name = m_entries[counter - 1]["swimmer"]
+            if counter == 1:
+                row = [
+                    counter,
+                    f_name,
+                    f_entries[counter - 1]["time"],
+                    f_entries[counter - 1]["season"],
+                    get_event_name(event),
+                    m_entries[counter - 1]["season"],
+                    m_entries[counter - 1]["time"],
+                    m_name,
+                    counter,
+                ]
+            else:
+                try:
+                    row = [
+                        counter,
+                        f_name,
+                        f_entries[counter - 1]["time"],
+                        f_entries[counter - 1]["season"],
+                        "",
+                        m_entries[counter - 1]["season"],
+                        m_entries[counter - 1]["time"],
+                        m_name,
+                        counter,
+                    ]
+                except IndexError:
+                    pass
+            table.append(row)
+            counter += 1
+    date = datetime.datetime.now()
+    return (
+        f'<h2>GHMV Top 5 All Time<br><span style="color: darkred; font-weight: bold;">UNOFFICIAL</span></h2>\n<p style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
+        + tabulate(table, headers=headers, tablefmt="html")
+    )
+
+
 @router.get("/top5")
+async def get_all_top5(request: web.Request) -> web.Response:
+    db = request.config_dict["DB"]
+    return web.Response(body=await fetch_all_top5(db))
+
+
+@router.get("/top5-unofficial")
 async def get_all_top5(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     return web.Response(body=await fetch_all_top5(db))
