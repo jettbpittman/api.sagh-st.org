@@ -450,6 +450,7 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
         "active": row["active"],
         "homeschool": row['homeschool'],
         "dob": row['dob'],
+        "usas_id": row['usas_id'],
         "stats": {
             "entries": entries[0],
             "meet_count": len(meets),
@@ -591,6 +592,7 @@ async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
         "class": row["class"],
         "active": row["active"],
         "homeschool": row['homeschool'],
+        "usas_id": row['usas_id'],
         "dob": row['dob'],
         "stats": {
             "entries": entries[0]
@@ -1053,6 +1055,8 @@ async def edit_swimmer(request: web.Request) -> web.Response:
         fields["class"] = swimmer['class']
     if "active" in swimmer:
         fields["active"] = swimmer['active']
+    if "usas_id" in swimmer:
+        fields["usas_id"] = swimmer['usas_id']
     if fields:
         field_values = ""
         for field in fields:
@@ -1074,6 +1078,7 @@ async def edit_swimmer(request: web.Request) -> web.Response:
             "class": swimmer['class'],
             "team": await fetch_team(db, swimmer['team']),
             "active": swimmer['active'],
+            "usas_id": swimmer['usas_id']
         }
     )
 

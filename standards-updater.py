@@ -1,41 +1,47 @@
 import psycopg2
 import json
+from datetime import datetime
+
+date = datetime.now()
 
 with open("creds.json", "r") as f:
     creds = json.load(f)
 
-standards = ["USAS-BB", "USAS-A", "USAS-AA", "USAS-SS"]
 
-events = [
-    "F200F",
-    "F200M",
-    "F50F",
-    "F100L",
-    "F100F",
-    "F500F",
-    "F100B",
-    "F100S",
-    "F200B",
-    "F200S",
-    "F200L",
-    "F400M",
-    "F1000F",
-    "F1650F",
-    "M200F",
-    "M200M",
-    "M50F",
-    "M100L",
-    "M100F",
-    "M500F",
-    "M100B",
-    "M100S",
-    "M200B",
-    "M200S",
-    "M200L",
-    "M400M",
-    "M1000F",
-    "M1650F",
-]
+if date.month >= 9:
+    standards = ["TISCA-A"]
+else:
+    standards = ["USAS-BB", "USAS-A", "USAS-AA", "USAS-SS"]
+    events = [
+        "F200F",
+        "F200M",
+        "F50F",
+        "F100L",
+        "F100F",
+        "F500F",
+        "F100B",
+        "F100S",
+        "F200B",
+        "F200S",
+        "F200L",
+        "F400M",
+        "F1000F",
+        "F1650F",
+        "M200F",
+        "M200M",
+        "M50F",
+        "M100L",
+        "M100F",
+        "M500F",
+        "M100B",
+        "M100S",
+        "M200B",
+        "M200S",
+        "M200L",
+        "M400M",
+        "M1000F",
+        "M1650F",
+    ]
 
 
 def format_time(e):
