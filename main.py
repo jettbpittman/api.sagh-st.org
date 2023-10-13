@@ -404,6 +404,8 @@ async def fetch_team_roster(db: asyncpg.Connection, id: str):
     )
     roster = []
     for swimmer in rows:
+        if swimmer['id'] in [1, 2, 3]:
+            continue
         s = await fetch_swimmer_lite(db, swimmer["id"])
         roster.append(s)
     return sorted(roster, key=lambda d: d["last_name"])
