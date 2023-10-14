@@ -794,7 +794,7 @@ async def submit_attendance(request: web.Request) -> web.Response:
 
 @router.get("/attendance/date/{date}")
 @handle_json_error
-async def submit_attendance(request: web.Request) -> web.Response:
+async def get_attendance_date(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=1)
     if a.status != 200:
         return a
@@ -804,6 +804,21 @@ async def submit_attendance(request: web.Request) -> web.Response:
     resp = {'date': date}
     for swimmer in rows:
         resp[swimmer['swimmer']] = swimmer['status']
+    return web.json_response(resp)
+
+
+@router.get("/attendance/swimmer/{swimmer}")
+@handle_json_error
+async def get_attendance_swimmer(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
+    db = request.config_dict["DB"]
+    swimmer = request.match_info['swimmer']
+    rows = await db.fetch("SELECT * FROM attendance WHERE swimmer = $1", swimmer)
+    resp = {'swimmer': await fetch_swimmer(db, swimmer), 'records': []}
+    for date in rows:
+        resp['records'].append(date['status'])
     return web.json_response(resp)
 
 
