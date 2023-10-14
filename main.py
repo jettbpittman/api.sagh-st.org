@@ -795,9 +795,9 @@ async def submit_attendance(request: web.Request) -> web.Response:
 @router.get("/attendance/date/{date}")
 @handle_json_error
 async def submit_attendance(request: web.Request) -> web.Response:
-    #a = await auth_required(request, permissions=1)
-    #if a.status != 200:
-    #    return a
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
     db = request.config_dict["DB"]
     date = request.match_info['date']
     rows = await db.fetch("SELECT * FROM attendance WHERE date = $1", date)
