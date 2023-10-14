@@ -1169,6 +1169,9 @@ async def db_info(request: web.Request) -> web.Response:
 
 @router.get("/swimmers/{id}")
 async def get_swimmers(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=0)
+    if a.status != 200:
+        return a
     swimmer_id = request.match_info["id"]
     db = request.config_dict["DB"]
     swimmer = await fetch_swimmer(db, swimmer_id)
@@ -1177,6 +1180,9 @@ async def get_swimmers(request: web.Request) -> web.Response:
 
 @router.get("/swimmers/{id}/entries")
 async def get_swimmer_all_entries(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=0)
+    if a.status != 200:
+        return a
     swimmer_id = request.match_info["id"]
     db = request.config_dict["DB"]
     entries = await fetch_swimmer_entries(db, swimmer_id)
@@ -1185,6 +1191,9 @@ async def get_swimmer_all_entries(request: web.Request) -> web.Response:
 
 @router.get("/swimmers/{id}/entries/{event}")
 async def get_swimmer_all_entries_event(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=0)
+    if a.status != 200:
+        return a
     swimmer_id = request.match_info["id"]
     event_code = request.match_info["event"]
     db = request.config_dict["DB"]
@@ -1194,6 +1203,9 @@ async def get_swimmer_all_entries_event(request: web.Request) -> web.Response:
 
 @router.get("/swimmers/{id}/best")
 async def get_swimmer_bests(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=0)
+    if a.status != 200:
+        return a
     swimmer_id = request.match_info["id"]
     db = request.config_dict["DB"]
     entries = await fetch_swimmer_best_times(db, swimmer_id)
@@ -1240,6 +1252,9 @@ async def create_team(request: web.Request) -> web.Response:
 
 @router.get("/teams/{id}")
 async def get_team(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
     team_id = request.match_info["id"]
     db = request.config_dict["DB"]
     team = await fetch_team(db, team_id)
@@ -1248,6 +1263,9 @@ async def get_team(request: web.Request) -> web.Response:
 
 @router.get("/teams/{id}/roster/current")
 async def get_team_roster_c(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
     team_id = request.match_info["id"]
     db = request.config_dict["DB"]
     team = await fetch_team_roster(db, team_id)
@@ -1256,6 +1274,9 @@ async def get_team_roster_c(request: web.Request) -> web.Response:
 
 @router.get("/teams/{id}/roster/all")
 async def get_team_roster_all(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
     team_id = request.match_info["id"]
     db = request.config_dict["DB"]
     team = await fetch_team_roster_all(db, team_id)
