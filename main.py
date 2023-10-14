@@ -819,7 +819,7 @@ async def get_attendance_swimmer(request: web.Request) -> web.Response:
     resp = {'swimmer': await fetch_swimmer(db, swimmer), 'records': {}}
     for date in rows:
         resp['records'][date['date']] = date['status']
-    resp['records'] = dict(sorted(resp['records'].items()))
+    resp['records'] = dict(sorted(resp['records'].items(), reverse=True))
     return web.json_response(resp)
 
 
