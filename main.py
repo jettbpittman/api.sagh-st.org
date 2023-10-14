@@ -815,7 +815,7 @@ async def get_attendance_swimmer(request: web.Request) -> web.Response:
         return a
     db = request.config_dict["DB"]
     swimmer = request.match_info['swimmer']
-    rows = await db.fetch("SELECT * FROM attendance WHERE swimmer = $1", swimmer)
+    rows = await db.fetch("SELECT * FROM attendance WHERE swimmer = $1", int(swimmer))
     resp = {'swimmer': await fetch_swimmer(db, swimmer), 'records': []}
     for date in rows:
         resp['records'].append(date['status'])
