@@ -785,7 +785,8 @@ async def submit_attendance(request: web.Request) -> web.Response:
     date = payload.pop('date')
     resp = {"date": date}
     for swimmer in payload:
-        await db.execute("INSERT INTO attendance (date, swimmer, status) VALUES ($1, $2, $3)", date, int(swimmer), payload[swimmer])
+        await db.execute("INSERT INTO attendance (date, swimmer, status) VALUES ($1, $2, $3) ON CONFLICT (date, "
+                         "swimmer) DO UPDATE SET status = $3", date, int(swimmer), payload[swimmer])
         resp[swimmer] = payload[swimmer]
     return web.json_response(resp)
 
