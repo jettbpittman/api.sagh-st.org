@@ -775,6 +775,7 @@ def strip_token(token: str):
 
 
 @router.post("/attendance/submit")
+@handle_json_error
 async def submit_attendance(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=1)
     if a.status != 200:
@@ -791,7 +792,24 @@ async def submit_attendance(request: web.Request) -> web.Response:
     return web.json_response(resp)
 
 
+@router.post("/attendance/date/{date}")
+@handle_json_error
+async def submit_attendance(request: web.Request) -> web.Response:
+    #a = await auth_required(request, permissions=1)
+    #if a.status != 200:
+    #    return a
+    db = request.config_dict["DB"]
+    date = request.match_info['date']
+    rows = await db.fetch("SELECT * FROM attendance WHERE date = $1", date)
+    resp = {'date': date}
+    for swimmer in rows:
+        resp[swimmer['swimmer']] = swimmer['status']
+    return web.json_response(resp)
+
+
+
 @router.post("/auth/check")
+@handle_json_error
 async def auth_check(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
