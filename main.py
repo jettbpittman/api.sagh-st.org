@@ -792,7 +792,7 @@ async def submit_attendance(request: web.Request) -> web.Response:
     return web.json_response(resp)
 
 
-@router.post("/attendance/date/{date}")
+@router.get("/attendance/date/{date}")
 @handle_json_error
 async def submit_attendance(request: web.Request) -> web.Response:
     #a = await auth_required(request, permissions=1)
