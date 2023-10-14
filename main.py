@@ -69,7 +69,7 @@ def generate_id(id_type: int, year: int = 0, join_date: int = None) -> int:
     """
 
     :param year: integer - Graduation Year
-    :param id_type: integer - 1: Swimmer, 2: Meet, 3: Entry, 4: Team, 5: User
+    :param id_type: integer - 1: Swimmer, 2: Meet, 3: Entry, 4: Team, 5: User, 6: Attendance
     :param join_date: integer - UNIX timestamp for when the swimmer joined the team
     :return:
     """
@@ -772,6 +772,23 @@ def strip_token(token: str):
     id = (base64.b64decode(t[0].encode())).decode()
     token_r = t[0]
     return {"user_id": id, "token": token_r}
+
+
+@router.post("/attendance/submit")
+async def submit_attendance(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
+    db = request.config_dict["DB"]
+    info = await request.json()
+    payload: dict = info
+    date = payload.pop('date')
+    resp = {}
+    resp += {"date": date}
+    for swimmer in payload:
+        await db.execute("INSERT INTO attendance (date, swimmer, status) VALUES ($1, $2, $3)", date, swimmer, payload[swimmer])
+        resp += {swimmer: payload[swimmer]}
+    return web.json_response(resp)
 
 
 @router.post("/auth/check")
