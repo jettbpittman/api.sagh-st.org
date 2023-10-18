@@ -801,6 +801,7 @@ async def get_attendance_date(request: web.Request) -> web.Response:
         return a
     db = request.config_dict["DB"]
     date = request.match_info['date']
+    type = request.match_info['type']
     rows = await db.fetch("SELECT * FROM attendance WHERE date = $1 and type = $2", date, type)
     resp = {'date': date}
     for swimmer in rows:
