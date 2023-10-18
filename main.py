@@ -784,10 +784,11 @@ async def submit_attendance(request: web.Request) -> web.Response:
     info = await request.json()
     payload: dict = info
     date = payload.pop('date')
-    resp = {"date": date}
+    type = payload.pop('type')
+    resp = {"date": date, "type": type}
     for swimmer in payload:
-        await db.execute("INSERT INTO attendance (date, swimmer, status) VALUES ($1, $2, $3) ON CONFLICT (date, "
-                         "swimmer) DO UPDATE SET status = $3", date, int(swimmer), payload[swimmer])
+        await db.execute("INSERT INTO attendance (date, swimmer, status, type) VALUES ($1, $2, $3, $4) ON CONFLICT (date, "
+                         "swimmer, type) DO UPDATE SET status = $3", date, int(swimmer), payload[swimmer], type)
         resp[swimmer] = payload[swimmer]
     return web.json_response(resp)
 
@@ -801,7 +802,7 @@ async def get_attendance_date(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     date = request.match_info['date']
     rows = await db.fetch("SELECT * FROM attendance WHERE date = $1", date)
-    resp = {'date': date}
+    resp = {'date': date, 'type': rows[0]['type']}
     for swimmer in rows:
         resp[swimmer['swimmer']] = swimmer['status']
     return web.json_response(resp)
@@ -818,7 +819,7 @@ async def get_attendance_swimmer(request: web.Request) -> web.Response:
     rows = await db.fetch("SELECT * FROM attendance WHERE swimmer = $1", int(swimmer))
     resp = {'swimmer': await fetch_swimmer(db, swimmer), 'records': {}}
     for date in rows:
-        resp['records'][date['date']] = date['status']
+        resp['records'][date['date']] = [date['status'], date['type']]
     resp['records'] = dict(sorted(resp['records'].items(), reverse=True))
     return web.json_response(resp)
 
