@@ -30,7 +30,7 @@ def sortKey(e):
 
 
 def sortEvents(e):
-    return e["number"]
+    return str(e["number"])
 
 
 def gender(g):
