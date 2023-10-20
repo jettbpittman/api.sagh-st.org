@@ -46,23 +46,14 @@ def sortByTime(e):
         return e["time"]
 
 
-def get_event_name(e):
-    if e[-2] == "R":
-        if e[-1] == "F":
-            return f"{e[:-2]} Freestyle Relay"
-        if e[-1] == "M":
-            return f"{e[:-2]} Medley Relay"
-    if e[-1] == "F":
-        return f"{e[:-1]} Freestyle"
-    if e[-1] == "M":
-        return f"{e[:-1]} Individual Medley"
-    if e[-1] == "B":
-        return f"{e[:-1]} Backstroke"
-    if e[-1] == "S":
-        return f"{e[:-1]} Breaststroke"
-    if e[-1] == "L":
-        return f"{e[:-1]} Butterfly"
-
+async def get_event_name(db, e):
+    ev = await fetch_event(db, e)
+    if ev['gender'] == "M":
+        return f"Men {ev['name']}"
+    if ev['gender'] == "F":
+        return f"Women {ev['name']}"
+    else:
+        return f"Mixed {ev['name']}"
 
 
 def generate_id(id_type: int, year: int = 0, join_date: int = None) -> int:
