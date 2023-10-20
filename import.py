@@ -30,7 +30,10 @@ def sortKey(e):
 
 
 def sortEvents(e):
-    return str(e["number"])
+    if str(e['number']).endswith("A"):
+        return float(e['number'][:-1] + ".5")
+    else:
+        return float(e["number"])
 
 
 def gender(g):
