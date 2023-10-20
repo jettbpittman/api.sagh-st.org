@@ -218,6 +218,8 @@ mm_json = json.loads(orjson.dumps(
         default=str
     ).decode())
 
+print(d['meet']['events'].keys())
+
 
 if "--import" in sys.argv:
     print("importing")
@@ -250,6 +252,7 @@ if "--import" in sys.argv:
     cur = con.cursor()
 
     events = mm_json["meet"]["events"]
+    print(events)
     m = []
 
     for event in events:
@@ -462,6 +465,7 @@ if "--text" or "--html" in sys.argv:
 
     for event in events:
         ev = events[event]
+        print(event)
         if ev['stroke'] == "Stroke.UNKNOWN":
             e.append({
                 "name": f"Event {ev['number']} - {gender(ev['gender'])} 1 Meter Diving",
