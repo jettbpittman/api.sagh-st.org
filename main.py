@@ -391,7 +391,20 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
 
 async def fetch_team_roster(db: asyncpg.Connection, id: str):
     rows = await db.fetch(
-        "SELECT * FROM swimmers WHERE team = $1 AND active = true", str(id)
+        "SELECT * FROM swimmers WHERE team = $1 AND active = true AND manager = false", str(id)
+    )
+    roster = []
+    for swimmer in rows:
+        if swimmer['id'] in [1, 2, 3]:
+            continue
+        s = await fetch_swimmer_lite(db, swimmer["id"])
+        roster.append(s)
+    return sorted(roster, key=lambda d: d["last_name"])
+
+
+async def fetch_team_managers(db: asyncpg.Connection, id: str):
+    rows = await db.fetch(
+        "SELECT * FROM swimmers WHERE team = $1 AND active = true AND manager = true", str(id)
     )
     roster = []
     for swimmer in rows:
@@ -444,6 +457,7 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
         "homeschool": row['homeschool'],
         "dob": row['dob'],
         "usas_id": row['usas_id'],
+        "manager": row['manager'],
         "stats": {
             "entries": entries[0],
             "meet_count": len(meets),
@@ -587,6 +601,7 @@ async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
         "homeschool": row['homeschool'],
         "usas_id": row['usas_id'],
         "dob": row['dob'],
+        "manager": row['manager'],
         "stats": {
             "entries": entries[0]
         }
@@ -1263,6 +1278,17 @@ async def get_team_roster_c(request: web.Request) -> web.Response:
     team_id = request.match_info["id"]
     db = request.config_dict["DB"]
     team = await fetch_team_roster(db, team_id)
+    return web.json_response(team)
+
+
+@router.get("/teams/{id}/roster/current/managers")
+async def get_team_roster_m(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
+    team_id = request.match_info["id"]
+    db = request.config_dict["DB"]
+    team = await fetch_team_managers(db, team_id)
     return web.json_response(team)
 
 
