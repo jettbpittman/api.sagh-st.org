@@ -182,6 +182,7 @@ async def fetch_event(db: asyncpg.Connection, id: str):
         "distance": row["distance"],
         "stroke": row["stroke"],
         "relay": row["relay"],
+        "gender": row['gender']
     }
 
 
