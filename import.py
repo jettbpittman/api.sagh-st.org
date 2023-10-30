@@ -174,6 +174,8 @@ def assemble_event_code(e, split):
         code += "F"
     if e["gender"] == "Gender.MALE":
         code += "M"
+    if e['gender'] == "Gender.MIXED":
+        code += "I"
     if e["relay"] and split:
         dist = int(e["distance"] / 4)
         code += str(dist)
