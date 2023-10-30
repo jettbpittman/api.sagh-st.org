@@ -1162,6 +1162,7 @@ async def change_class_status(request: web.Request) -> web.Response:
 
 
 @router.get("/info")
+@handle_json_error
 async def db_info(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     entries = await db.fetchrow("SELECT count(*) from entries")
@@ -1177,6 +1178,7 @@ async def db_info(request: web.Request) -> web.Response:
 
 
 @router.get("/swimmers/{id}")
+@handle_json_error
 async def get_swimmers(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
@@ -1188,6 +1190,7 @@ async def get_swimmers(request: web.Request) -> web.Response:
 
 
 @router.get("/swimmers/{id}/entries")
+@handle_json_error
 async def get_swimmer_all_entries(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
@@ -1199,6 +1202,7 @@ async def get_swimmer_all_entries(request: web.Request) -> web.Response:
 
 
 @router.get("/swimmers/{id}/entries/{event}")
+@handle_json_error
 async def get_swimmer_all_entries_event(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
@@ -1211,6 +1215,7 @@ async def get_swimmer_all_entries_event(request: web.Request) -> web.Response:
 
 
 @router.get("/swimmers/{id}/best")
+@handle_json_error
 async def get_swimmer_bests(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
@@ -1223,6 +1228,7 @@ async def get_swimmer_bests(request: web.Request) -> web.Response:
 
 # Team Queries
 @router.post("/teams")
+@handle_json_error
 async def create_team(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=2)
     if a.status != 200:
@@ -1260,6 +1266,7 @@ async def create_team(request: web.Request) -> web.Response:
 
 
 @router.get("/teams/{id}")
+@handle_json_error
 async def get_team(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=1)
     if a.status != 200:
@@ -1271,6 +1278,7 @@ async def get_team(request: web.Request) -> web.Response:
 
 
 @router.get("/teams/{id}/roster/current")
+@handle_json_error
 async def get_team_roster_c(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=1)
     if a.status != 200:
@@ -1282,6 +1290,7 @@ async def get_team_roster_c(request: web.Request) -> web.Response:
 
 
 @router.get("/teams/{id}/roster/current/managers")
+@handle_json_error
 async def get_team_roster_m(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=1)
     if a.status != 200:
@@ -1293,6 +1302,7 @@ async def get_team_roster_m(request: web.Request) -> web.Response:
 
 
 @router.get("/teams/{id}/roster/all")
+@handle_json_error
 async def get_team_roster_all(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=1)
     if a.status != 200:
@@ -1305,6 +1315,7 @@ async def get_team_roster_all(request: web.Request) -> web.Response:
 
 # Meet Queries
 @router.post("/meets")
+@handle_json_error
 async def create_meet(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=2)
     if a.status != 200:
@@ -1344,6 +1355,7 @@ async def create_meet(request: web.Request) -> web.Response:
 
 
 @router.get("/meets/{id}")
+@handle_json_error
 async def get_meet(request: web.Request) -> web.Response:
     meet_id = request.match_info["id"]
     db = request.config_dict["DB"]
@@ -1352,6 +1364,7 @@ async def get_meet(request: web.Request) -> web.Response:
 
 
 @router.get("/meets/{id}/entries")
+@handle_json_error
 async def get_meet(request: web.Request) -> web.Response:
     meet_id = request.match_info["id"]
     db = request.config_dict["DB"]
@@ -1360,6 +1373,7 @@ async def get_meet(request: web.Request) -> web.Response:
 
 
 @router.get("/meets")
+@handle_json_error
 async def get_all_meets(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     meets = await fetch_all_meets(db)
@@ -1367,6 +1381,7 @@ async def get_all_meets(request: web.Request) -> web.Response:
 
 
 @router.get("/season/{code}/meets")
+@handle_json_error
 async def get_season_meets(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     season = request.match_info["code"]
@@ -1375,6 +1390,7 @@ async def get_season_meets(request: web.Request) -> web.Response:
 
 
 @router.get("/latest/meet")
+@handle_json_error
 async def get_latest_meet(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     meet = await fetch_latest_meet(db)
@@ -1382,6 +1398,7 @@ async def get_latest_meet(request: web.Request) -> web.Response:
 
 
 @router.get("/meets/{meet}/entries/{team}")
+@handle_json_error
 async def get_meet_entries_by_team(request: web.Request) -> web.Response:
     meet_id = request.match_info["meet"]
     team_id = request.match_info["team"]
@@ -1392,6 +1409,7 @@ async def get_meet_entries_by_team(request: web.Request) -> web.Response:
 
 # Entry Queries
 @router.post("/entries")
+@handle_json_error
 async def create_entry(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=2)
     if a.status != 200:
@@ -1430,6 +1448,7 @@ async def create_entry(request: web.Request) -> web.Response:
 
 
 @router.get("/entries/{id}")
+@handle_json_error
 async def get_entry(request: web.Request) -> web.Response:
     entry_id = request.match_info["id"]
     db = request.config_dict["DB"]
@@ -1447,6 +1466,7 @@ async def get_event_all(request: web.Request) -> web.Response:
 
 
 @router.get("/events/{code}/top5")
+@handle_json_error
 async def get_event_top5(request: web.Request) -> web.Response:
     event_code = request.match_info["code"]
     db = request.config_dict["DB"]
