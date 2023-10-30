@@ -52,7 +52,7 @@ async def get_event_name(db, e):
         return f"Men {ev['name']}"
     if ev['gender'] == "F":
         return f"Women {ev['name']}"
-    else:
+    if ev['gender'] == "I":
         return f"Mixed {ev['name']}"
 
 
