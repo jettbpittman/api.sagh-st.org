@@ -250,12 +250,12 @@ if "--import" in sys.argv:
     cur = con.cursor()
 
     events = mm_json["meet"]["events"]
-    print(events)
     m = []
 
     for event in events:
         ev = events[event]
         event_code = assemble_event_code(ev, False)
+        print(event_code)
         for entry in ev["entries"]:
             try:
                 if entry["swimmers"][0]["team_code"] == TEAM:
