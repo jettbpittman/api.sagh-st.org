@@ -225,11 +225,7 @@ if "--import" in sys.argv:
     print("importing")
     try:
         if sys.argv[2]:
-            if isinstance(sys.argv[2], int):
-                MEET = sys.argv[2]
-            else:
-                print("second argument must be the meet ID!")
-                sys.exit()
+            MEET = sys.argv[2]
         else:
             print(
                 "requires the following argument: 1 - path to hy3, 2 - meet ID, 3 - options (--import, --html, --text)")
