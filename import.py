@@ -280,6 +280,9 @@ if "--import" in sys.argv:
                             if ev["distance"] == 800:
                                 lead_ptime = psplits[3]
                                 lead_psplits = [psplits[0], psplits[1], psplits[2], psplits[3]]
+                            else:
+                                lead_ptime = psplits[0]
+                                lead_psplits = []
                             ptime = format_time(entry['prelim_time'])
                         if entry["finals_splits"]:
                             fsplits = list(entry["finals_splits"].values())
@@ -294,6 +297,9 @@ if "--import" in sys.argv:
                             if ev["distance"] == 800:
                                 lead_ftime = fsplits[3]
                                 lead_fsplits = [fsplits[0], fsplits[1], fsplits[2], fsplits[3]]
+                            else:
+                                lead_ftime = fsplits[0]
+                                lead_fsplits = []
                             ftime = format_time(entry['finals_time'])
                         if lead_ptime:
                             if entry["prelim_time_code"] == "WithTimeTimeCode.DISQUALIFICATION":
