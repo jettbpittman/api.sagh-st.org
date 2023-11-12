@@ -781,6 +781,31 @@ def strip_token(token: str):
     return {"user_id": id, "token": token_r}
 
 
+@handle_json_error
+@router.post("/standards/create")
+async def create_standard(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
+    db = request.config_dict["DB"]
+    info = await request.json()
+
+    name = info['name']
+    org = info['org']
+    min_time = info['time']
+    code = info['code']
+    year = info['year']
+    age = info['age']
+    gender = info['gender']
+    short_name = info['short_name']
+    course = info['course']
+    await db.execute(
+        "INSERT INTO standards (name, authority, min_time, code, year, age, gender, short_name, course)"
+        " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", name, org, min_time, code, year, age, gender, short_name, course
+    )
+    return web.json_response(info)
+
+
 @router.post("/attendance/submit")
 @handle_json_error
 async def submit_attendance(request: web.Request) -> web.Response:
