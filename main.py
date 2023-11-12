@@ -55,6 +55,23 @@ async def get_event_name(db, e):
     if ev['gender'] == "I":
         return f"Mixed {ev['name']}"
 
+def get_event_name_simple(e):
+    if e[-2] == "R":
+        if e[-1] == "F":
+            return f"{e[:-2]} Freestyle Relay"
+        if e[-1] == "M":
+            return f"{e[:-2]} Medley Relay"
+    if e[-1] == "F":
+        return f"{e[:-1]} Freestyle"
+    if e[-1] == "M":
+        return f"{e[:-1]} Individual Medley"
+    if e[-1] == "B":
+        return f"{e[:-1]} Backstroke"
+    if e[-1] == "S":
+        return f"{e[:-1]} Breaststroke"
+    if e[-1] == "L":
+        return f"{e[:-1]} Butterfly"
+
 
 def generate_id(id_type: int, year: int = 0, join_date: int = None) -> int:
     """
@@ -1518,8 +1535,10 @@ async def fetch_all_top5(db):
     ]
     table = []
     for event in events:
-        m_entries = await fetch_event_top_five(db, f"M{event}")
-        f_entries = await fetch_event_top_five(db, f"F{event}")
+        m_event = "M" + event
+        f_event = "F" + event
+        m_entries = await fetch_event_top_five(db, m_event)
+        f_entries = await fetch_event_top_five(db, f_event)
         counter = 1
         while counter <= 5:
             f_name = f_entries[counter - 1]["swimmer"]
@@ -1530,7 +1549,7 @@ async def fetch_all_top5(db):
                     f_name,
                     f_entries[counter - 1]["time"],
                     f_entries[counter - 1]["season"],
-                    get_event_name(db, event),
+                    get_event_name_simple(event),
                     m_entries[counter - 1]["season"],
                     m_entries[counter - 1]["time"],
                     m_name,
@@ -1587,7 +1606,7 @@ async def fetch_all_top5_unofficial(db):
                     f_name,
                     f_entries[counter - 1]["time"],
                     f_entries[counter - 1]["season"],
-                    get_event_name(db, event),
+                    get_event_name_simple(event),
                     m_entries[counter - 1]["season"],
                     m_entries[counter - 1]["time"],
                     m_name,

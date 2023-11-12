@@ -1,5 +1,8 @@
 import psycopg2
 import json
+from datetime import datetime
+
+date = datetime.now()
 
 with open("creds.json", "r") as f:
     creds = json.load(f)
@@ -39,7 +42,7 @@ myKeys.sort()
 sorted_tiscas = {i: tiscas[i] for i in myKeys}
 
 
-output = ""
+output = f"TISCA Qualifiers (as of {date.day} {date.strftime('%B')[0:3].upper()} {date.year})\n\n"
 
 for i in sorted_tiscas:
     output += i + "\n===========\n"
