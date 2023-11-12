@@ -789,7 +789,6 @@ async def create_standard(request: web.Request) -> web.Response:
         return a
     db = request.config_dict["DB"]
     info = await request.json()
-
     name = info['name']
     org = info['org']
     min_time = info['time']
@@ -799,9 +798,13 @@ async def create_standard(request: web.Request) -> web.Response:
     gender = info['gender']
     short_name = info['short_name']
     course = info['course']
+    event = info['event']
     await db.execute(
         "INSERT INTO standards (name, authority, min_time, code, year, age, gender, short_name, course)"
         " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", name, org, min_time, code, year, age, gender, short_name, course
+    )
+    await db.execute(
+        "UPDATE standards set event = $1 where code = $2", event, code
     )
     return web.json_response(info)
 
