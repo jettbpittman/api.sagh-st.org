@@ -1520,8 +1520,8 @@ async def get_event_top5(request: web.Request) -> web.Response:
     return web.json_response(entries)
 
 
-async def fetch_all_top5(db):
-    events = ["200F", "200M", "50F", "100L", "100F", "500F", "100B", "100S", "200RM", "200RF", "400RF"]
+async def fetch_top5_school(db):
+    events = ["200F", "200M", "50F", "100L", "100F", "500F", "100B", "100S"]
     headers = [
         "Place",
         "Name",
@@ -1574,13 +1574,14 @@ async def fetch_all_top5(db):
             counter += 1
     date = datetime.datetime.now()
     return (
-        f'<h2>GHMV Top 5 All Time</h2>\n<p style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
+        f'<h2>GHMV Top 5 All Time<br><span style="color: darkred; font-weight: bold;">SCHOOL RECORDS</span></h2>\n<p '
+        f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
         + tabulate(table, headers=headers, tablefmt="html")
     )
 
 
-async def fetch_all_top5_unofficial(db):
-    events = ["200F", "200M", "50F", "100L", "100F", "500F", "100B", "100S", "200RM", "200RF", "400RF"]
+async def fetch_top5_program(db):
+    events = ["200F", "200M", "50F", "100L", "100F", "500F", "100B", "100S"]
     headers = [
         "Place",
         "Name",
@@ -1631,33 +1632,37 @@ async def fetch_all_top5_unofficial(db):
             counter += 1
     date = datetime.datetime.now()
     return (
-        f'<h2>GHMV Top 5 All Time<br><span style="color: darkred; font-weight: bold;">UNOFFICIAL</span></h2>\n<p style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
+        f'<h2>GHMV Top 5 All Time<br><span style="color: darkred; font-weight: bold;">PROGRAM RECORDS</span></h2>\n<p '
+        f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
         + tabulate(table, headers=headers, tablefmt="html")
     )
 
 
-@router.get("/top5")
-async def get_all_top5(request: web.Request) -> web.Response:
+@router.get("/records/top5/school")
+async def get_school_top5(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
-    return web.Response(body=await fetch_all_top5(db))
+    return web.Response(body=await fetch_top5_school(db))
 
 
-@router.get("/top5-unofficial")
-async def get_all_top5(request: web.Request) -> web.Response:
+@router.get("/records/top5/program")
+async def get_program_top5(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
-    return web.Response(body=await fetch_all_top5_unofficial(db))
+    return web.Response(body=await fetch_top5_program(db))
 
 
 @router.get("/top5/update")
-async def get_all_top5(request: web.Request) -> web.Response:
+async def update_top5(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=4)
     if a.status != 200:
         return a
     db = request.config_dict["DB"]
-    top5 = await fetch_all_top5(db)
-    with open(f'{os.path.expanduser("~")}/shared/top5-autoupdated.html', "w") as f:
-        f.write(top5)
-    return web.Response(body=top5)
+    school = await fetch_top5_school(db)
+    with open(f'{os.path.expanduser("~")}/shared/top5-school-autoupdated.html', "w") as f:
+        f.write(school)
+    program = await fetch_top5_program(db)
+    with open(f'{os.path.expanduser("~")}/shared/top5-program-autoupdated.html', "w") as f:
+        f.write(program)
+    return web.Response(body="Done!")
 
 
 # Ping
