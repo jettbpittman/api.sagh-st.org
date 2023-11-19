@@ -236,7 +236,7 @@ async def fetch_event_all_entries(db: asyncpg.Connection, id: str):
 
 
 async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
-    rows = await db.fetch("SELECT * FROM entries WHERE event = $1", str(id))
+    rows = await db.fetch("SELECT * FROM entries WHERE event = $1 AND ignored = false", str(id))
     if not rows:
         raise NotFoundException(f"Event {id} does not exist!")
     entries = []
@@ -316,7 +316,7 @@ async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
     m = await fetch_meet(db, meet)
     for swimmer in rows:
         rows2 = await db.fetch(
-            "SELECT * FROM entries WHERE meet = $1 AND swimmer = $2",
+            "SELECT * FROM entries WHERE meet = $1 AND swimmer = $2  AND ignored = false",
             int(meet),
             int(swimmer["id"]),
         )
@@ -360,7 +360,7 @@ async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
 
 
 async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
-    rows = await db.fetch("SELECT event FROM entries WHERE meet = $1", int(id))
+    rows = await db.fetch("SELECT event FROM entries WHERE meet = $1 AND ignored = false", int(id))
     if not rows:
         raise NotFoundException(f"Meet {id} does not exist!")
     entries = []
@@ -485,7 +485,7 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
 
 
 async def fetch_swimmer_entries(db: asyncpg.Connection, id: int):
-    rows = await db.fetch("SELECT event FROM entries WHERE swimmer = $1", int(id))
+    rows = await db.fetch("SELECT event FROM entries WHERE swimmer = $1  AND ignored = false", int(id))
     if not rows:
         raise NotFoundException(f"Swimmer {id} does not exist!")
     entries = []
@@ -579,7 +579,7 @@ async def fetch_swimmer_best_times(db: asyncpg.Connection, id: int):
 
 async def fetch_swimmer_entries_event(db: asyncpg.Connection, id: int, event: str):
     rows = await db.fetch(
-        "SELECT * FROM entries WHERE swimmer = $1 AND event = $2", int(id), str(event)
+        "SELECT * FROM entries WHERE swimmer = $1 AND event = $2 AND ignored = false", int(id), str(event)
     )
     if not rows:
         return []
