@@ -254,8 +254,8 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
                 name = ""
                 for swimmer_id in s_list:
                     swimmer = await fetch_swimmer_lite(db, swimmer_id)
-                    name += f"{swimmer['first_name'][0]} {swimmer['last_name']}\n"
-                name = name.strip()[2:]
+                    name += f"{swimmer['first_name'][0]} {swimmer['last_name']}<br>"
+                name = name.strip()[-3:]
             except:
                 pass
         else:
