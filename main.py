@@ -1523,7 +1523,7 @@ async def get_event_top5(request: web.Request) -> web.Response:
 async def fetch_top5_school(db):
     events = ["200F", "200M", "50F", "100L", "100F", "500F", "100B", "100S"]
     headers = [
-        "Place",
+        "Rank",
         "Name",
         "Time",
         "Year",
@@ -1531,7 +1531,7 @@ async def fetch_top5_school(db):
         "Year",
         "Time",
         "Name",
-        "Place",
+        "Rank",
     ]
     table = []
     for event in events:
@@ -1584,7 +1584,7 @@ async def fetch_top5_school(db):
 async def fetch_top5_program(db):
     events = ["200F", "200M", "50F", "100L", "100F", "500F", "100B", "100S"]
     headers = [
-        "Place",
+        "Rank",
         "Name",
         "Time",
         "Year",
@@ -1592,7 +1592,7 @@ async def fetch_top5_program(db):
         "Year",
         "Time",
         "Name",
-        "Place",
+        "Rank",
     ]
     table = []
     for event in events:
@@ -1643,7 +1643,7 @@ async def fetch_top5_program(db):
 async def fetch_top5_relays(db):
     events = ["200RM", "200RF", "400RF"]
     headers = [
-        "Place",
+        "Rank",
         "Name",
         "Time",
         "Year",
@@ -1651,7 +1651,7 @@ async def fetch_top5_relays(db):
         "Year",
         "Time",
         "Name",
-        "Place",
+        "Rank",
     ]
     table = []
     for event in events:
