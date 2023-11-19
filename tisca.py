@@ -26,7 +26,7 @@ tiscas = {}
 
 for swimmer in swimmers:
     name = f"{swimmer[3]}, {swimmer[1]} {swimmer[2]}"
-    cur.execute(f"SELECT * FROM entries WHERE swimmer = {swimmer[0]}")
+    cur.execute(f"SELECT * FROM entries WHERE swimmer = {swimmer[0]} AND ignored = false")
     l = cur.fetchall()
     for entry in l:
         if str(entry[7]).startswith("TISCA"):
