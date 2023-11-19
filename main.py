@@ -1577,7 +1577,7 @@ async def fetch_top5_school(db):
         f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">SCHOOL '
         f'RECORDS</span></h2>\n<p'
         f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
-        + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
+        + tabulate(table, headers=headers, tablefmt="html", colglobalalign="center")
     )
 
 
@@ -1636,7 +1636,7 @@ async def fetch_top5_program(db):
         f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">PROGRAM '
         f'RECORDS</span></h2>\n<p'
         f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
-        + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
+        + tabulate(table, headers=headers, tablefmt="html", colglobalalign="center")
     )
 
 
@@ -1695,7 +1695,7 @@ async def fetch_top5_relays(db):
         f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">RELAY '
         f'RECORDS</span></h2>\n<p'
         f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
-        + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
+        + tabulate(table, headers=headers, tablefmt="html", colglobalalign="center")
     )
 
 
