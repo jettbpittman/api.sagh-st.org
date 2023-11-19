@@ -1659,17 +1659,31 @@ async def fetch_top5_relays(db):
         f_entries = await fetch_event_top_five(db, f"F{event}")
         counter = 1
         while counter <= 5:
-            f_name = f_entries[counter - 1]["swimmer"]
-            m_name = m_entries[counter - 1]["swimmer"]
+            try:
+                f_name = f_entries[counter - 1]["swimmer"]
+                f_time = f_entries[counter - 1]["time"]
+                f_season = f_entries[counter - 1]["season"]
+            except IndexError:
+                f_name = ""
+                f_time = ""
+                f_season = ""
+            try:
+                m_name = m_entries[counter - 1]["swimmer"]
+                m_time = m_entries[counter - 1]["time"]
+                m_season = m_entries[counter - 1]["season"]
+            except IndexError:
+                m_name = ""
+                m_time = ""
+                m_season = ""
             if counter == 1:
                 row = [
                     counter,
                     f_name,
-                    f_entries[counter - 1]["time"],
-                    f_entries[counter - 1]["season"],
+                    f_time,
+                    f_season,
                     get_event_name_simple(event),
-                    m_entries[counter - 1]["season"],
-                    m_entries[counter - 1]["time"],
+                    m_season,
+                    m_time,
                     m_name,
                     counter,
                 ]
@@ -1678,11 +1692,11 @@ async def fetch_top5_relays(db):
                     row = [
                         counter,
                         f_name,
-                        f_entries[counter - 1]["time"],
-                        f_entries[counter - 1]["season"],
+                        f_time,
+                        f_season,
                         "",
-                        m_entries[counter - 1]["season"],
-                        m_entries[counter - 1]["time"],
+                        m_season,
+                        m_time,
                         m_name,
                         counter,
                     ]
