@@ -254,7 +254,7 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
                 name = ""
                 for swimmer_id in s_list:
                     swimmer = await fetch_swimmer_lite(db, swimmer_id)
-                    name += f", {swimmer['first_name'][0]} {swimmer['last_name']}"
+                    name += f"{swimmer['first_name'][0]} {swimmer['last_name']}\n"
                 name = name.strip()[2:]
             except:
                 pass
@@ -1574,7 +1574,8 @@ async def fetch_top5_school(db):
             counter += 1
     date = datetime.datetime.now()
     return (
-        f'<h2>GHMV Top 5 All Time<br><span style="color: darkred; font-weight: bold;">SCHOOL RECORDS</span></h2>\n<p '
+        f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">SCHOOL '
+        f'RECORDS</span></h2>\n<p'
         f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
         + tabulate(table, headers=headers, tablefmt="html")
     )
@@ -1632,10 +1633,71 @@ async def fetch_top5_program(db):
             counter += 1
     date = datetime.datetime.now()
     return (
-        f'<h2>GHMV Top 5 All Time<br><span style="color: darkred; font-weight: bold;">PROGRAM RECORDS</span></h2>\n<p '
+        f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">PROGRAM '
+        f'RECORDS</span></h2>\n<p'
         f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
         + tabulate(table, headers=headers, tablefmt="html")
     )
+
+
+async def fetch_top5_relays(db):
+    events = ["200RM", "200RF", "400RF", "400RM", "800RF"]
+    headers = [
+        "Place",
+        "Name",
+        "Time",
+        "Year",
+        "Event",
+        "Year",
+        "Time",
+        "Name",
+        "Place",
+    ]
+    table = []
+    for event in events:
+        m_entries = await fetch_event_top_five(db, f"M{event}")
+        f_entries = await fetch_event_top_five(db, f"F{event}")
+        counter = 1
+        while counter <= 5:
+            f_name = f_entries[counter - 1]["swimmer"]
+            m_name = m_entries[counter - 1]["swimmer"]
+            if counter == 1:
+                row = [
+                    counter,
+                    f_name,
+                    f_entries[counter - 1]["time"],
+                    f_entries[counter - 1]["season"],
+                    get_event_name_simple(event),
+                    m_entries[counter - 1]["season"],
+                    m_entries[counter - 1]["time"],
+                    m_name,
+                    counter,
+                ]
+            else:
+                try:
+                    row = [
+                        counter,
+                        f_name,
+                        f_entries[counter - 1]["time"],
+                        f_entries[counter - 1]["season"],
+                        "",
+                        m_entries[counter - 1]["season"],
+                        m_entries[counter - 1]["time"],
+                        m_name,
+                        counter,
+                    ]
+                except IndexError:
+                    pass
+            table.append(row)
+            counter += 1
+    date = datetime.datetime.now()
+    return (
+        f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">RELAY '
+        f'RECORDS</span></h2>\n<p'
+        f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
+        + tabulate(table, headers=headers, tablefmt="html")
+    )
+
 
 
 @router.get("/records/top5/school")
@@ -1646,6 +1708,12 @@ async def get_school_top5(request: web.Request) -> web.Response:
 
 @router.get("/records/top5/program")
 async def get_program_top5(request: web.Request) -> web.Response:
+    db = request.config_dict["DB"]
+    return web.Response(body=await fetch_top5_program(db))
+
+
+@router.get("/records/top5/relays")
+async def get_relay_top5(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     return web.Response(body=await fetch_top5_program(db))
 
