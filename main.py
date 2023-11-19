@@ -1641,7 +1641,7 @@ async def fetch_top5_program(db):
 
 
 async def fetch_top5_relays(db):
-    events = ["200RM", "200RF", "400RF", "400RM", "800RF"]
+    events = ["200RM", "200RF", "400RF"]
     headers = [
         "Place",
         "Name",
