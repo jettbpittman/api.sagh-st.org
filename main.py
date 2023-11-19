@@ -1730,6 +1730,9 @@ async def update_top5(request: web.Request) -> web.Response:
     program = await fetch_top5_program(db)
     with open(f'{os.path.expanduser("~")}/shared/top5-program-autoupdated.html', "w") as f:
         f.write(program)
+    relays = await fetch_top5_relays(db)
+    with open(f'{os.path.expanduser("~")}/shared/top5-relays-autoupdated.html', "w") as f:
+        f.write(relays)
     return web.Response(body="Done!")
 
 
