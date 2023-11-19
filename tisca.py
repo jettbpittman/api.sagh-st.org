@@ -25,11 +25,21 @@ count = dict()
 tiscas = {}
 
 for swimmer in swimmers:
+    events = []
+    best_times = {}
     name = f"{swimmer[3]}, {swimmer[1]} {swimmer[2]}"
-    cur.execute(f"SELECT * FROM entries WHERE swimmer = {swimmer[0]} AND ignored = false")
+    cur.execute(f"SELECT * FROM entries WHERE swimmer = {swimmer[0]} AND ignored = false ORDER BY time")
     l = cur.fetchall()
     for entry in l:
         if str(entry[7]).startswith("TISCA"):
+            if entry[3] in events:
+                if best_times[entry[3]] > entry[5]:
+                    best_times[entry[3]] = entry[5]
+                else:
+                    continue
+            else:
+                events.append(entry[3])
+                best_times[entry[3]] = entry[5]
             cur.execute(f"SELECT name FROM meets WHERE id = {entry[2]}")
             m = cur.fetchone()
             try:
