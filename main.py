@@ -310,7 +310,7 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
 
 async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
     rows = await db.fetch(
-        "SELECT id FROM swimmers WHERE team = $1 ORDER BY last_name", str(team)
+        "SELECT id FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name", str(team)
     )
     entries = {}
     m = await fetch_meet(db, meet)
@@ -409,7 +409,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
 
 async def fetch_team_roster(db: asyncpg.Connection, id: str):
     rows = await db.fetch(
-        "SELECT * FROM swimmers WHERE team = $1 AND active = true AND manager = false", str(id)
+        "SELECT * FROM swimmers WHERE team = $1 AND active = true AND manager = false ORDER BY last_name, first_name, middle_name", str(id)
     )
     roster = []
     for swimmer in rows:
@@ -434,7 +434,7 @@ async def fetch_team_managers(db: asyncpg.Connection, id: str):
 
 
 async def fetch_team_roster_all(db: asyncpg.Connection, id: str):
-    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1", str(id))
+    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name", str(id))
     roster = []
     for swimmer in rows:
         s = await fetch_swimmer_lite(db, swimmer["id"])
