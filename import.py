@@ -589,7 +589,7 @@ if "--text" or "--html" in sys.argv:
                     pass
         times.sort(key=sortKey)
         e.sort(key=sortEvents)
-    if "--champs" in sys.argv:
+    if input("champs?") == "y":
         for ev in e:
             tbF = pt()
             tbF.title = f"{ev['name'].strip()} - Finals"
