@@ -36,7 +36,8 @@ else:
 cuts = {}
 
 for standard in standards:
-    cur.execute(f"SELECT * FROM standards WHERE authority = '{standard[0]}' AND short_name = '{standard[1]}'")
+    cur.execute(f"SELECT * FROM standards WHERE"
+                f" authority = '{standard[0]}' AND short_name = '{standard[1]}' AND year >= {int(SEASON)}")
     stan = cur.fetchall()
     for st in stan:
         try:
@@ -71,44 +72,17 @@ ent = cur.execute(f"SELECT * FROM entries WHERE standards is null and meet in (s
 entries = cur.fetchall()
 
 for entry in entries:
-    print(entry)
     try:
         print(cuts[entry[3]])
     except KeyError:
         continue
-    for t in reversed(cuts[entry[3]]):
+    print(reversed(cuts[entry[3]]))
+    for t in cuts[entry[3]]:
         if format_time(entry[5]) <= format_time(cuts[entry[3]][t]):
             print(f"{format_time(entry[5])} <= {format_time(cuts[entry[3]][t])}")
-            print("tisca")
             cur.execute(
                 f"UPDATE entries SET standards = '{assemble_code(t, entry[3])}' WHERE id = '{entry[0]}'"
             )
             con.commit()
-
-sys.exit()
-for event in entries:
-    for standard in standards:
-        code = f"{standard}-{event}"
-        cur.execute(f"SELECT * FROM standards WHERE code = '{code}'")
-        row = cur.fetchone()
-        print(row)
-        try:
-            min_time = format_time(row[3])
-        except:
+        else:
             continue
-
-        cur.execute(f"SELECT * FROM entries WHERE event = '{event}'")
-        rows = cur.fetchall()
-
-        for entry in rows:
-            print(entry)
-            t = format_time(entry[5])
-            if t <= min_time:
-                print(f"{t} <= {min_time}")
-                e = cur.execute(
-                    f"UPDATE entries SET standards = '{code}' WHERE id = '{entry[0]}'"
-                )
-                con.commit()
-                print(f"Set {event} {entry[1]} ({entry[5]}) to {code}")
-            else:
-                continue
