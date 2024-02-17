@@ -750,6 +750,7 @@ async def fetch_user(db: asyncpg.Connection, id: int):
                 "permissions": row["permissions"],
                 "active": row["active"],
                 "linked_swimmer": row['linked_swimmer'],
+                "latest_access": row['latest_access']
             }
 
 
@@ -1008,6 +1009,8 @@ async def edit_user(request: web.Request) -> web.Response:
             fields['permissions'] = user['permissions']
         if "active" in user:
             fields['active'] = user['active']
+        if "linked_swimmer" in user:
+            fields['linked_swimmer'] = user['linked_swimmer']
     else:
         return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
     if "name" in user:
@@ -1034,7 +1037,8 @@ async def edit_user(request: web.Request) -> web.Response:
             "username": user['username'],
             "email": user['email'],
             "permissions": user['permissions'],
-            "active": user['active']
+            "active": user['active'],
+            "linked_swimmer": user['linked_swimmer']
         }
     )
 
