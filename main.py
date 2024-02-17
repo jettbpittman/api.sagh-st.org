@@ -30,6 +30,22 @@ with open("creds.json", "r") as f:
     creds = json.load(f)
 
 
+def create_date(start, end = None):
+    try:
+        if end is None:
+            d = datetime.datetime.strptime(start, "%Y%m%d")
+            return f"{d.day} {d.month} {d.year}"
+        if end:
+            s = datetime.datetime.strptime(start, "%Y%m%d")
+            e = datetime.datetime.strptime(end, "%Y%m%d")
+            if s.month == e.month:
+                return f"{s.day}-{e.day} {s.month} {s.year}"
+            else:
+                return f"{s.day} {s.month} - {e.day} {e.month} {s.year}"
+    except:
+        return "Bad date format!"
+
+
 def top5Sort(e):
     if len(e["time"]) <= 5:
         adjusted_t = f"0:{e['time']}"
@@ -635,7 +651,8 @@ async def fetch_meet(db: asyncpg.Connection, id: int):
         "name": row["name"],
         "venue": row["venue"],
         "designator": row["designator"],
-        "date": row["date"],
+        "startdate": row["startdate"],
+        "date": create_date(row['startdate'], row['enddate']),
         "season": row["season"],
         "most_recent": row["most_recent"],
     }
@@ -654,7 +671,8 @@ async def fetch_all_meets(db: asyncpg.Connection):
                 "name": row["name"],
                 "venue": row["venue"],
                 "designator": row["designator"],
-                "date": row["date"],
+                "startdate": row["startdate"],
+                "date": create_date(row['startdate'], row['enddate']),
                 "most_recent": row["most_recent"],
             }
         )
@@ -675,7 +693,8 @@ async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
                 "name": row["name"],
                 "venue": row["venue"],
                 "designator": row["designator"],
-                "date": row["date"],
+                "startdate": row["startdate"],
+                "date": create_date(row['startdate'], row['enddate']),
                 "most_recent": row["most_recent"],
             }
         )
@@ -691,7 +710,8 @@ async def fetch_latest_meet(db: asyncpg.Connection):
         "name": row["name"],
         "venue": row["venue"],
         "designator": row["designator"],
-        "date": row["date"],
+        "startdate": row["startdate"],
+        "date": create_date(row['startdate'], row['enddate']),
         "season": row["season"],
         "most_recent": row["most_recent"],
     }
