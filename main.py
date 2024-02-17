@@ -644,7 +644,7 @@ async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
 
 
 async def fetch_meet(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT * FROM meets WHERE id = $1", int(id))
+    row = await db.fetchrow("SELECT * FROM meets WHERE id = $1 ORDER BY startdate", int(id))
     if not row:
         raise NotFoundException(f"Meet {id} does not exist!")
     return {
@@ -660,7 +660,7 @@ async def fetch_meet(db: asyncpg.Connection, id: int):
 
 
 async def fetch_all_meets(db: asyncpg.Connection):
-    rows = await db.fetch("SELECT * FROM meets")
+    rows = await db.fetch("SELECT * FROM meets ORDER BY startdate")
     if not rows:
         raise NotFoundException(f"Unexpected error!")
     meets = []
@@ -682,7 +682,7 @@ async def fetch_all_meets(db: asyncpg.Connection):
 
 
 async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
-    rows = await db.fetch("SELECT * FROM meets WHERE season = $1", int(season))
+    rows = await db.fetch("SELECT * FROM meets WHERE season = $1 ORDER BY startdate", int(season))
     if not rows:
         raise NotFoundException(f"No meets in season {season}")
     meets = []
