@@ -44,7 +44,7 @@ def create_date(start, end = None):
             else:
                 return f"{s.day} {calendar.month_name[s.month]} - {e.day} {calendar.month_name[e.month]} {s.year}"
     except Exception as e:
-        return f"Bad date format! {e}"
+        return f"Unknown"
 
 
 def top5Sort(e):
