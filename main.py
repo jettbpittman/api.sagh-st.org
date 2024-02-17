@@ -2,6 +2,7 @@ import aiosqlite
 import asyncio
 import datetime
 import json
+import calendar
 import pprint
 import random
 import os
@@ -34,16 +35,16 @@ def create_date(start, end = None):
     try:
         if end is None:
             d = datetime.datetime.strptime(start, "%Y%m%d")
-            return f"{d.day} {d.month} {d.year}"
+            return f"{d.day} {calendar.month_name[d.month]} {d.year}"
         if end:
             s = datetime.datetime.strptime(start, "%Y%m%d")
             e = datetime.datetime.strptime(end, "%Y%m%d")
             if s.month == e.month:
-                return f"{s.day}-{e.day} {s.month} {s.year}"
+                return f"{s.day}-{e.day} {calendar.month_name[e.month]} {s.year}"
             else:
-                return f"{s.day} {s.month} - {e.day} {e.month} {s.year}"
-    except:
-        return "Bad date format!"
+                return f"{s.day} {calendar.month_name[s.month]} - {e.day} {calendar.month_name[e.month]} {s.year}"
+    except Exception as e:
+        return f"Bad date format! {e}"
 
 
 def top5Sort(e):
