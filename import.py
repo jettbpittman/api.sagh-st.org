@@ -312,7 +312,9 @@ if "--import" in sys.argv:
                                     "seed": "RL",
                                     "time": format_time(lead_ptime),
                                     "splits": lead_psplits,
-                                    "swimmers": None
+                                    "swimmers": None,
+                                    "session": "prelims",
+                                    "place": 0
                                 })
                             m.append({
                                 "name": f"{SHORTNAME}, {entry['relay_team_id']}",
@@ -321,7 +323,9 @@ if "--import" in sys.argv:
                                 "seed": format_time(entry['seed_time']),
                                 "time": ptime,
                                 "splits": psplits,
-                                "swimmers": swimmers
+                                "swimmers": swimmers,
+                                "session": "prelims",
+                                "place": entry['prelim_overall_place']
                             })
                         if lead_ftime:
                             if entry["finals_time_code"] == "WithTimeTimeCode.DISQUALIFICATION":
@@ -334,7 +338,9 @@ if "--import" in sys.argv:
                                     "seed": "RL",
                                     "time": format_time(lead_ftime),
                                     "splits": lead_fsplits,
-                                    "swimmers": None
+                                    "swimmers": None,
+                                    "session": "finals",
+                                    "place": 0
                                 }
                             )
                             if entry["prelim_time"]:
@@ -348,7 +354,9 @@ if "--import" in sys.argv:
                                 "seed": seed,
                                 "time": ftime,
                                 "splits": fsplits,
-                                "swimmers": swimmers
+                                "swimmers": swimmers,
+                                "session": "finals",
+                                "place": entry["finals_overall_place"]
                             })
                     else:
                         lead_swimmer = entry["swimmers"][0]
@@ -365,7 +373,9 @@ if "--import" in sys.argv:
                                     "seed": format_time(entry["seed_time"]),
                                     "time": format_time(entry["prelim_time"]),
                                     "splits": psplits,
-                                    "swimmers": None
+                                    "swimmers": None,
+                                    "session": "prelims",
+                                    "place": entry["prelim_overall_place"]
                                 }
                             )
                         if entry["finals_time"]:
@@ -375,8 +385,8 @@ if "--import" in sys.argv:
                                 seed = format_time(entry["prelim_time"])
                             else:
                                 seed = format_time(entry["seed_time"])
-                            psplits = list(entry["finals_splits"].values())
-                            psplits.sort()
+                            fsplits = list(entry["finals_splits"].values())
+                            fsplits.sort()
                             m.append(
                                 {
                                     "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']}",
@@ -384,8 +394,10 @@ if "--import" in sys.argv:
                                     "event": event_code,
                                     "seed": seed,
                                     "time": format_time(entry["finals_time"]),
-                                    "splits": psplits,
-                                    "swimmers": None
+                                    "splits": fsplits,
+                                    "swimmers": None,
+                                    "session": "finals",
+                                    "place": entry["finals_overall_place"]
                                 }
                             )
                 else:
@@ -420,12 +432,11 @@ if "--import" in sys.argv:
             relay = True
         else:
             relay = False
-        print(relay)
         new_id = generate_id(3)
         cur.execute(
-            "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits, relay) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            "INSERT INTO entries (id, swimmer, meet, event, seed, time, splits, relay, session, place) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (new_id, id, MEET,
-             result["event"], result["seed"], result["time"], splits, relay)
+             result["event"], result["seed"], result["time"], splits, relay, result['session'], result['place'])
         )
         con.commit()
         if result['swimmers']:

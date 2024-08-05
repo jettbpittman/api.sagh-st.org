@@ -1,19 +1,13 @@
-import aiosqlite
 import asyncio
 import datetime
 import json
 import calendar
-import pprint
 import random
 import os
-import re
-import operator
 import base64
 import secrets
 from passlib.hash import argon2
-from pathlib import Path
 from typing import AsyncIterator, Awaitable, Callable
-from enum import Enum
 from tabulate import tabulate
 
 import asyncpg
@@ -72,6 +66,7 @@ async def get_event_name(db, e):
     if ev['gender'] == "I":
         return f"Mixed {ev['name']}"
 
+
 def get_event_name_simple(e):
     if e[-2] == "R":
         if e[-1] == "F":
@@ -112,20 +107,6 @@ def generate_id(id_type: int, year: int = 0, join_date: int = None) -> int:
         + (id_type << 24)
         + (random.randint(1, 1000) << 32)
     )
-
-
-class Events(Enum):
-    TWO_MEDLEY_R = "200 Medley Relay"
-    TWO_FREE = "200 Freestyle"
-    TWO_IM = "200 Individual Medley"
-    FIFTY_FREE = "50 Freestyle"
-    ONE_FLY = "100 Butterfly"
-    ONE_FREE = "100 Freestyle"
-    FIVE_FREE = "500 Freestyle"
-    TWO_FREE_R = "200 Freestyle Relay"
-    ONE_BACK = "100 Backstroke"
-    ONE_BREAST = "100 Breaststroke"
-    FOUR_FREE_R = "400 Freestyle Relay"
 
 
 async def fetch_standard(db: asyncpg.Connection, code):
@@ -656,6 +637,12 @@ async def fetch_meet(db: asyncpg.Connection, id: int):
         "date": create_date(row['startdate'], row['enddate']),
         "season": row["season"],
         "most_recent": row["most_recent"],
+        "host": row['host'],
+        "notes": row['notes'],
+        "p-warmups": row['p-warmups'],
+        "f-warmups": row['f-warmups'],
+        "p-start": row['p-start'],
+        "f-start": row['f-start'],
     }
 
 
@@ -675,6 +662,12 @@ async def fetch_all_meets(db: asyncpg.Connection):
                 "startdate": row["startdate"],
                 "date": create_date(row['startdate'], row['enddate']),
                 "most_recent": row["most_recent"],
+                "host": row['host'],
+                "notes": row['notes'],
+                "p-warmups": row['p-warmups'],
+                "f-warmups": row['f-warmups'],
+                "p-start": row['p-start'],
+                "f-start": row['f-start'],
             }
         )
     meets.sort(key=lambda d: d["season"], reverse=True)
@@ -697,13 +690,19 @@ async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
                 "startdate": row["startdate"],
                 "date": create_date(row['startdate'], row['enddate']),
                 "most_recent": row["most_recent"],
+                "host": row['host'],
+                "notes": row['notes'],
+                "p-warmups": row['p-warmups'],
+                "f-warmups": row['f-warmups'],
+                "p-start": row['p-start'],
+                "f-start": row['f-start'],
             }
         )
     return meets
 
 
 async def fetch_latest_meet(db: asyncpg.Connection):
-    row = await db.fetchrow("SELECT * FROM meets WHERE most_recent = 1")
+    row = await db.fetchrow("SELECT * FROM meets WHERE concluded = true ORDER BY startdate DESC LIMIT 1")
     if not row:
         raise NotFoundException(f"No recent meet!")
     return {
@@ -715,6 +714,12 @@ async def fetch_latest_meet(db: asyncpg.Connection):
         "date": create_date(row['startdate'], row['enddate']),
         "season": row["season"],
         "most_recent": row["most_recent"],
+        "host": row['host'],
+        "notes": row['notes'],
+        "p-warmups": row['p-warmups'],
+        "f-warmups": row['f-warmups'],
+        "p-start": row['p-start'],
+        "f-start": row['f-start'],
     }
 
 
@@ -740,7 +745,8 @@ async def fetch_all_users(db: asyncpg.Connection):
 
 
 async def fetch_user(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT id, username, name, email, permissions, active, linked_swimmer, latest_access FROM users WHERE id = $1", int(id))
+    row = await db.fetchrow("SELECT id, username, name, email, permissions, active, linked_swimmer, latest_access "
+                            "FROM users WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"No user found!")
     return {
@@ -900,7 +906,6 @@ async def get_attendance_swimmer(request: web.Request) -> web.Response:
     return web.json_response(resp)
 
 
-
 @router.post("/auth/check")
 @handle_json_error
 async def auth_check(request: web.Request) -> web.Response:
@@ -1042,12 +1047,6 @@ async def edit_user(request: web.Request) -> web.Response:
             "linked_swimmer": user['linked_swimmer']
         }
     )
-
-
-@router.get("/cors-is-so-annoying")
-@handle_json_error
-async def corsSucks(request: web.Request) -> web.Response:
-    return web.json_response({"message": "i bet you can't read this"})
 
 
 @router.post("/users/{id}/password")
@@ -1232,7 +1231,6 @@ async def change_class_status(request: web.Request) -> web.Response:
     return web.json_response({"status": "ok", "reason": "updated!"})
 
 
-
 @router.get("/info")
 @handle_json_error
 async def db_info(request: web.Request) -> web.Response:
@@ -1396,22 +1394,27 @@ async def create_meet(request: web.Request) -> web.Response:
     name = info["name"]
     venue = info["venue"]
     designator = info["designator"]
-    date = info["date"]
+    startdate = info["startdate"]
     season = info["season"]
-    latest = info["most_recent"]
+    format = info['format']
+    host = info['host']
+    concluded = info['concluded']
     id = generate_id(2)
     db = request.config_dict["DB"]
-    if latest == 1:
-        await db.execute("UPDATE meets SET most_recent = 0 WHERE most_recent = 1")
     await db.execute(
-        "INSERT INTO meets (id, name, venue, designator, date, season, most_recent) VALUES($1, $2, $3, $4, $5, $6, $7)",
+        "INSERT INTO meets "
+        "(id, name, venue, designator, startdate, season, concluded, host, format) "
+        "VALUES "
+        "($1, $2, $3, $4, $5, $6, $7, $8, $9)",
         id,
         name,
         venue,
         designator,
-        date,
+        startdate,
         season,
-        latest,
+        concluded,
+        host,
+        format,
     )
     return web.json_response(
         {
@@ -1419,9 +1422,117 @@ async def create_meet(request: web.Request) -> web.Response:
             "name": name,
             "venue": venue,
             "designator": designator,
-            "date": date,
+            "startdate": startdate,
             "season": season,
-            "most_recent": latest,
+            "concluded": concluded,
+            "host": host,
+            "format": format
+        }
+    )
+
+
+@router.post("/meets/{id}/dtinfo")
+async def update_meet_dtinfo(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=2)
+    if a.status != 200:
+        return a
+    info = await request.json()
+    fields = {}
+    meet_id = request.match_info["id"]
+    if "p-warmups" in info:
+        fields["p-warmups"] = info['p-warmups']
+    if "f-warmups" in info:
+        fields["f-warmups"] = info['f-warmups']
+    if "p-start" in info:
+        fields["p-start"] = info['p-start']
+    if "f-start" in info:
+        fields["f-start"] = info['f-start']
+    if "startdate" in info:
+        fields["startdate"] = info['startdate']
+    if "enddate" in info:
+        fields["enddate"] = info['enddate']
+    db = request.config_dict['DB']
+    if fields:
+        field_values = ""
+        for field in fields:
+            field_values += f"{field} = {fields[field]}"
+        await db.execute(
+            f"UPDATE meets SET {field_values} WHERE id = $1", int(meet_id)
+        )
+    meet = await db.fetchrow(
+        "SELECT * FROM meets WHERE id = $1", int(meet_id)
+    )
+    return web.json_response(
+        {
+            "id": meet_id,
+            "name": meet['name'],
+            "venue": meet['venue'],
+            "designator": meet['designator'],
+            "startdate": meet['startdate'],
+            "enddate": meet['enddate'],
+            "season": meet['season'],
+            "concluded": meet['concluded'],
+            "host": meet['host'],
+            "format": meet['format'],
+            "p-warmups": meet['p-warmups'],
+            "f-warmups": meet['f-warmups'],
+            "p-start": meet['p-start'],
+            "f-start": meet['f-start'],
+        }
+    )
+
+
+@router.post("/meets/{id}/geninfo")
+async def update_meet_geninfo(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=2)
+    if a.status != 200:
+        return a
+    info = await request.json()
+    fields = {}
+    meet_id = request.match_info["id"]
+    if "name" in info:
+        fields["name"] = info['name']
+    if "venue" in info:
+        fields["venue"] = info['venue']
+    if "designator" in info:
+        fields["designator"] = info['designator']
+    if "season" in info:
+        fields["season"] = info['season']
+    if "concluded" in info:
+        fields["concluded"] = info['concluded']
+    if "host" in info:
+        fields["host"] = info['host']
+    if "format" in info:
+        fields["format"] = info['format']
+    if "notes" in info:
+        fields["notes"] = info['notes']
+    db = request.config_dict['DB']
+    if fields:
+        field_values = ""
+        for field in fields:
+            field_values += f"{field} = {fields[field]}"
+        await db.execute(
+            f"UPDATE meets SET {field_values} WHERE id = $1", int(meet_id)
+        )
+    meet = await db.fetchrow(
+        "SELECT * FROM meets WHERE id = $1", int(meet_id)
+    )
+    return web.json_response(
+        {
+            "id": meet_id,
+            "name": meet['name'],
+            "venue": meet['venue'],
+            "designator": meet['designator'],
+            "startdate": meet['startdate'],
+            "enddate": meet['enddate'],
+            "season": meet['season'],
+            "concluded": meet['concluded'],
+            "host": meet['host'],
+            "format": meet['format'],
+            "p-warmups": meet['p-warmups'],
+            "f-warmups": meet['f-warmups'],
+            "p-start": meet['p-start'],
+            "f-start": meet['f-start'],
         }
     )
 
