@@ -26,8 +26,6 @@ for swimmer in swimmers:
     name = f"{swimmer[3]}, {swimmer[1]} {swimmer[2]}".strip()
     count.update({name: l[0][0]})
 
-rcount = dict()
-
 r = cur.execute("""SELECT * FROM relays""")
 relays = cur.fetchall()
 
@@ -39,13 +37,10 @@ for relay in relays:
         cur.execute(f"SELECT first_name, middle_name, last_name FROM swimmers WHERE id = {relay[counter]}")
         l = cur.fetchall()
         name = f"{l[0][2]}, {l[0][0]} {l[0][1]}".strip()
-        if name not in rcount:
-            rcount[name] = 1
-        else:
-            rcount[name] += 1
+        count[name] += 1
         counter += 1
 
-rcount = dict(sorted(rcount.items(), key=lambda item: item[1], reverse=True))
+rcount = dict(sorted(count.items(), key=lambda item: item[1], reverse=True))
 
 for line in rcount:
     print(f"{line} - {rcount[line]}")
@@ -55,4 +50,4 @@ for line in rcount:
 #for swimmer in count:
 #    print(f"{swimmer} - {count[swimmer]}")
 
-#print(f"Total Swimmers - {len(swimmers)}")
+print(f"Total Swimmers - {len(swimmers)}")
