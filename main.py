@@ -1523,6 +1523,7 @@ async def update_meet_geninfo(request: web.Request) -> web.Response:
         field_values = ""
         for field in fields:
             field_values += f"{field} = {fields[field]}, "
+        print(field_values)
         await db.execute(
             f"UPDATE meets SET {field_values[:-2]} WHERE id = $1", int(meet_id)
         )
