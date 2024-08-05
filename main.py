@@ -1503,21 +1503,21 @@ async def update_meet_geninfo(request: web.Request) -> web.Response:
     fields = {}
     meet_id = request.match_info["id"]
     if "name" in info:
-        fields["name"] = info['name']
+        fields["name"] = f"'{info['name']}'"
     if "venue" in info:
-        fields["venue"] = info['venue']
+        fields["venue"] = f"'{info['venue']}'"
     if "designator" in info:
-        fields["designator"] = info['designator']
+        fields["designator"] = f"'{info['designator']}'"
     if "season" in info:
         fields["season"] = info['season']
     if "concluded" in info:
         fields["concluded"] = info['concluded']
     if "host" in info:
-        fields["host"] = info['host']
+        fields["host"] = f"'{info['host']}'"
     if "format" in info:
-        fields["format"] = info['format']
+        fields["format"] = f"'{info['format']}'"
     if "notes" in info:
-        fields["notes"] = info['notes']
+        fields["notes"] = f"'{info['notes']}'"
     db = request.config_dict['DB']
     if fields:
         field_values = ""
