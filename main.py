@@ -1443,7 +1443,7 @@ async def create_meet(request: web.Request) -> web.Response:
     )
 
 
-@router.post("/meets/{id}/dtinfo")
+@router.patch("/meets/{id}/dtinfo")
 async def update_meet_dtinfo(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=2)
     if a.status != 200:
@@ -1494,7 +1494,7 @@ async def update_meet_dtinfo(request: web.Request) -> web.Response:
     )
 
 
-@router.post("/meets/{id}/geninfo")
+@router.patch("/meets/{id}/geninfo")
 async def update_meet_geninfo(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=2)
     if a.status != 200:
