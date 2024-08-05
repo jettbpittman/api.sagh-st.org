@@ -630,6 +630,7 @@ async def fetch_meet(db: asyncpg.Connection, id: int):
         raise NotFoundException(f"Meet {id} does not exist!")
     return {
         "id": row["id"],
+        "officialname": f"{row['startdate'][:4]} {row['host']} {row['name']}",
         "name": row["name"],
         "venue": row["venue"],
         "designator": row["designator"],
@@ -658,6 +659,7 @@ async def fetch_all_meets(db: asyncpg.Connection):
             {
                 "season": row["season"],
                 "id": row["id"],
+                "officialname": f"{row['startdate'][:4]} {row['host']} {row['name']}",
                 "name": row["name"],
                 "venue": row["venue"],
                 "designator": row["designator"],
@@ -688,6 +690,7 @@ async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
             {
                 "season": row["season"],
                 "id": row["id"],
+                "officialname": f"{row['startdate'][:4]} {row['host']} {row['name']}",
                 "name": row["name"],
                 "venue": row["venue"],
                 "designator": row["designator"],
@@ -714,6 +717,7 @@ async def fetch_latest_meet(db: asyncpg.Connection):
     return {
         "id": row["id"],
         "name": row["name"],
+        "officialname": f"{row['startdate'][:4]} {row['host']} {row['name']}",
         "venue": row["venue"],
         "designator": row["designator"],
         "startdate": row["startdate"],
