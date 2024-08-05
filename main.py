@@ -650,7 +650,7 @@ async def fetch_meet(db: asyncpg.Connection, id: int):
 
 
 async def fetch_all_meets(db: asyncpg.Connection):
-    rows = await db.fetch("SELECT * FROM meets ORDER BY startdate")
+    rows = await db.fetch("SELECT * FROM meets ORDER BY startdate DESC")
     if not rows:
         raise NotFoundException(f"Unexpected error!")
     meets = []
