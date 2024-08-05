@@ -1452,24 +1452,24 @@ async def update_meet_dtinfo(request: web.Request) -> web.Response:
     fields = {}
     meet_id = request.match_info["id"]
     if "p-warmups" in info:
-        fields["p-warmups"] = info['p-warmups']
+        fields["p-warmups"] = f"'{info['p-warmups']}'"
     if "f-warmups" in info:
-        fields["f-warmups"] = info['f-warmups']
+        fields["f-warmups"] = f"'{info['f-warmups']}'"
     if "p-start" in info:
-        fields["p-start"] = info['p-start']
+        fields["p-start"] = f"'{info['p-start']}'"
     if "f-start" in info:
-        fields["f-start"] = info['f-start']
+        fields["f-start"] = f"'{info['f-start']}'"
     if "startdate" in info:
-        fields["startdate"] = info['startdate']
+        fields["startdate"] = f"'{info['startdate']}'"
     if "enddate" in info:
-        fields["enddate"] = info['enddate']
+        fields["enddate"] = f"'{info['enddate']}'"
     db = request.config_dict['DB']
     if fields:
         field_values = ""
         for field in fields:
-            field_values += f"{field} = {fields[field]}"
+            field_values += f"{field} = {fields[field]}, "
         await db.execute(
-            f"UPDATE meets SET {field_values} WHERE id = $1", int(meet_id)
+            f"UPDATE meets SET {field_values[:-2]} WHERE id = $1", int(meet_id)
         )
     meet = await db.fetchrow(
         "SELECT * FROM meets WHERE id = $1", int(meet_id)
@@ -1523,7 +1523,6 @@ async def update_meet_geninfo(request: web.Request) -> web.Response:
         field_values = ""
         for field in fields:
             field_values += f"{field} = {fields[field]}, "
-        print(field_values)
         await db.execute(
             f"UPDATE meets SET {field_values[:-2]} WHERE id = $1", int(meet_id)
         )
