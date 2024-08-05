@@ -642,10 +642,10 @@ async def fetch_meet(db: asyncpg.Connection, id: int):
         "notes": row['notes'],
         "concluded": row['concluded'],
         "format": row['format'],
-        "p-warmups": row['p-warmups'],
-        "f-warmups": row['f-warmups'],
-        "p-start": row['p-start'],
-        "f-start": row['f-start'],
+        "pwarmups": row['pwarmups'],
+        "fwarmups": row['fwarmups'],
+        "pstart": row['pstart'],
+        "fstart": row['fstart'],
     }
 
 
@@ -670,10 +670,10 @@ async def fetch_all_meets(db: asyncpg.Connection):
                 "date": create_date(row['startdate'], row['enddate']),
                 "host": row['host'],
                 "notes": row['notes'],
-                "p-warmups": row['p-warmups'],
-                "f-warmups": row['f-warmups'],
-                "p-start": row['p-start'],
-                "f-start": row['f-start'],
+                "pwarmups": row['pwarmups'],
+                "fwarmups": row['fwarmups'],
+                "pstart": row['pstart'],
+                "fstart": row['fstart'],
             }
         )
     meets.sort(key=lambda d: d["season"], reverse=True)
@@ -701,10 +701,10 @@ async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
                 "date": create_date(row['startdate'], row['enddate']),
                 "host": row['host'],
                 "notes": row['notes'],
-                "p-warmups": row['p-warmups'],
-                "f-warmups": row['f-warmups'],
-                "p-start": row['p-start'],
-                "f-start": row['f-start'],
+                "pwarmups": row['pwarmups'],
+                "fwarmups": row['fwarmups'],
+                "pstart": row['pstart'],
+                "fstart": row['fstart'],
             }
         )
     return meets
@@ -728,10 +728,10 @@ async def fetch_latest_meet(db: asyncpg.Connection):
         "season": row["season"],
         "host": row['host'],
         "notes": row['notes'],
-        "p-warmups": row['p-warmups'],
-        "f-warmups": row['f-warmups'],
-        "p-start": row['p-start'],
-        "f-start": row['f-start'],
+        "pwarmups": row['pwarmups'],
+        "fwarmups": row['fwarmups'],
+        "pstart": row['pstart'],
+        "fstart": row['fstart'],
     }
 
 
@@ -1451,14 +1451,14 @@ async def update_meet_dtinfo(request: web.Request) -> web.Response:
     info = await request.json()
     fields = {}
     meet_id = request.match_info["id"]
-    if "p-warmups" in info:
-        fields["p-warmups"] = f"'{info['p-warmups']}'"
-    if "f-warmups" in info:
-        fields["f-warmups"] = f"'{info['f-warmups']}'"
-    if "p-start" in info:
-        fields["p-start"] = f"'{info['p-start']}'"
-    if "f-start" in info:
-        fields["f-start"] = f"'{info['f-start']}'"
+    if "pwarmups" in info:
+        fields["pwarmups"] = f"'{info['pwarmups']}'"
+    if "fwarmups" in info:
+        fields["fwarmups"] = f"'{info['fwarmups']}'"
+    if "pstart" in info:
+        fields["pstart"] = f"'{info['pstart']}'"
+    if "fstart" in info:
+        fields["fstart"] = f"'{info['fstart']}'"
     if "startdate" in info:
         fields["startdate"] = f"'{info['startdate']}'"
     if "enddate" in info:
@@ -1486,10 +1486,10 @@ async def update_meet_dtinfo(request: web.Request) -> web.Response:
             "concluded": meet['concluded'],
             "host": meet['host'],
             "format": meet['format'],
-            "p-warmups": meet['p-warmups'],
-            "f-warmups": meet['f-warmups'],
-            "p-start": meet['p-start'],
-            "f-start": meet['f-start'],
+            "pwarmups": meet['pwarmups'],
+            "fwarmups": meet['fwarmups'],
+            "pstart": meet['pstart'],
+            "fstart": meet['fstart'],
         }
     )
 
@@ -1541,10 +1541,10 @@ async def update_meet_geninfo(request: web.Request) -> web.Response:
             "concluded": meet['concluded'],
             "host": meet['host'],
             "format": meet['format'],
-            "p-warmups": meet['p-warmups'],
-            "f-warmups": meet['f-warmups'],
-            "p-start": meet['p-start'],
-            "f-start": meet['f-start'],
+            "pwarmups": meet['pwarmups'],
+            "fwarmups": meet['fwarmups'],
+            "pstart": meet['pstart'],
+            "fstart": meet['fstart'],
         }
     )
 
