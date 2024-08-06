@@ -800,7 +800,7 @@ async def fetch_latest_meet(db: asyncpg.Connection):
         "sessionpath": row['sessionpath'],
         "resultspath": row['resultspath'],
         "scorespath": row['scorespath'],
-        "last_updated": meet['last_updated'],
+        "last_updated": row['last_updated'],
     }
 
 
