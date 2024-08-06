@@ -70,7 +70,7 @@ html = f"""
         <h3>PRs from {MEET[1]}</h3>
         <pre style="font-size: small; text-align: left">{out + f"TOTAL PRs - {num}"}</pre>
         <p>GENERATED: {datetime.now().strftime("%m/%d/%Y %H:%M:%S")}</p>
-        <p>sagh-st.org</p>
+        <p>ghmvswim.org</p>
     </body>
 </html>
 """

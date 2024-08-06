@@ -57,7 +57,7 @@ html = f"""
         <h3>Top {num_of_qualifiers} from {meet}</h3>
         <pre style="font-size: small; text-align: left">{qualifiers}</pre>
         <p>GENERATED: {datetime.now().strftime("%m/%d/%Y %H:%M:%S")}</p>
-        <p>sagh-st.org</p>
+        <p>ghmvswim.org</p>
     </body>
 </html>
 """

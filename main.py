@@ -17,6 +17,47 @@ import aiohttp_cors
 router = web.RouteTableDef()
 
 
+venues = {
+    "AH": "Alamo Heights Natatorium",
+    "AM": "Texas A&M Student Recreation Center Natatorium",
+    "BU": "YMCA of the Highland Lakes",
+    "CC": "Corpus Cristi ISD Natatorium",
+    "CO": "Coronado Pool",
+    "NE": "Josh Davis Natatorium/Bill Walker Pool",
+    "NS": "NISD Natatorium & Swim Center",
+    "SA": "San Antonio Natatorium",
+    "SW": "Southwest Aquatic Center",
+    "TM": "TMI Episcopal",
+    "UT": "Lee & Joe Jamail Texas Swimming Center",
+    "PA": "Palo Alto Natatorium",
+    "LC": "Lamar CISD Natatorium",
+    "DC": "Don Cook Natatorium",
+    "BL": "George Block Aquatic Center",
+    "SC": "Schertz Aquatics Center",
+    "RR": "RRISD Aquatic Center"
+}
+
+venue_colors = {
+    "AH": "F8FFB0",
+    "AM": "FFCCCC",
+    "BU": "FFCCFF",
+    "CC": "99CCFF",
+    "CO": "99CCFF",
+    "NE": "CCCCFF",
+    "NS": "66DD88",
+    "SA": "FFCC99",
+    "SW": "99FFCC",
+    "TM": "FFFFFF",
+    "UT": "FFCC99",
+    "PA": "99CCFF",
+    "DC": "99CCFF",
+    "LC": "99CCFF",
+    "BL": "66DD88",
+    "SC": "99CCFF",
+    "RR": "FFCCFF"
+}
+
+
 class NotFoundException(BaseException):
     pass
 
@@ -1582,6 +1623,18 @@ async def get_season_meets(request: web.Request) -> web.Response:
     season = request.match_info["code"]
     meets = await fetch_meets_by_season(db, season)
     return web.json_response(meets)
+
+
+@router.get("/season/{code}/meets/schedule")
+@handle_json_error
+async def get_season_schedule(request: web.Request) -> web.Response:
+    db = request.config_dict["DB"]
+    season = request.match_info["code"]
+    meets = await fetch_meets_by_season(db, season)
+    html = ""
+    for meet in meets:
+        html += f'<tr style="background-color: #{venue_colors[meet["venue"]]};"><td style="width: 80%;" class="meet-info-col"><b>{meet["officialname"]}</b><br>{venues[meet["venue"]]}<br>{meet["date"]}<br>Warmups @ {meet["fwamrups"]} | Meet @ {meet["fstart"]}<br>{meet["notes"]}</td><td style="width: 20%" class="meet-files-col"><i>PDF</i><br><i>RESULTS</i><br><i>SCORES</i></td></tr>'
+    return web.Response(body=html)
 
 
 @router.get("/latest/meet")
