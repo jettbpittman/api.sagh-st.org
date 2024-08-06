@@ -1686,7 +1686,7 @@ async def get_meet(request: web.Request) -> web.Response:
 
 @router.get("/meets/{id}/entries")
 @handle_json_error
-async def get_meet(request: web.Request) -> web.Response:
+async def get_meet_entries(request: web.Request) -> web.Response:
     meet_id = request.match_info["id"]
     db = request.config_dict["DB"]
     meet = await fetch_entries_by_meet(db, meet_id)
@@ -1718,7 +1718,18 @@ async def get_season_schedule(request: web.Request) -> web.Response:
     meets = await fetch_meets_by_season(db, season)
     html = ""
     for meet in meets:
-        html += f'<tr class="meet-row"><td style="width: 80%; background-color: #{venue_colors[meet["venue"]]};" class="meet-info-col"><b>{meet["officialname"]}</b><br>{venues[meet["venue"]]}<br>{meet["date"]}<br>Warmups @ {meet["fwarmups"]} | Meet @ {meet["fstart"]}<br>{meet["notes"]}</td><td style="width: 20%; background-color: #{venue_colors[meet["venue"]]};" class="meet-files-col"><i>INFO</i><br><i>HEATS</i><br><i>SESSIONS</i><br><i>RESULTS</i><br><i>SCORES</i></td></tr>'
+        files = ""
+        if meet['infopath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["infopath"]}">INFO</a></b> | '
+        if meet['heatspath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["heatspath"]}">HEATS</a></b> | '
+        if meet['sessionpath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["sessionpath"]}">SESSIONS</a></b> | '
+        if meet['resultspath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["resultspath"]}">RESULTS</a></b> | '
+        if meet['scorespath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["scorespath"]}">SCORES</a></b> | '
+        html += f'<tr class="meet-row"><td style="width: 80%; background-color: #{venue_colors[meet["venue"]]};" class="meet-info-col"><b>{meet["officialname"]}</b><br>{venues[meet["venue"]]}<br>{meet["date"]}<br>Warmups @ {meet["fwarmups"]} | Meet @ {meet["fstart"]}<br>{meet["notes"]}</td><td style="width: 20%; background-color: #{venue_colors[meet["venue"]]};" class="meet-files-col">{files[:-3]}</td></tr>'
     return web.Response(body=html)
 
 
