@@ -1716,7 +1716,7 @@ async def get_season_schedule(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     season = request.match_info["code"]
     meets = await fetch_meets_by_season(db, season)
-    html = '<tr><th style="width: 80%; background-color: #F8FFB0;">Meet</th><th style="width: 20%; background-color: #F8FFB0;">Files</th></tr>'
+    html = '<tr><th style="width: 80%;">Meet</th><th style="width: 20%;">Files</th></tr>'
     for meet in meets:
         files = ""
         if meet['infopath']:
