@@ -696,6 +696,7 @@ async def fetch_meet(db: asyncpg.Connection, id: int):
         "sessionpath": row['sessionpath'],
         "resultspath": row['resultspath'],
         "scorespath": row['scorespath'],
+        "last_updated": row['last_updated'],
     }
 
 
@@ -729,6 +730,7 @@ async def fetch_all_meets(db: asyncpg.Connection):
                 "sessionpath": row['sessionpath'],
                 "resultspath": row['resultspath'],
                 "scorespath": row['scorespath'],
+                "last_updated": row['last_updated'],
             }
         )
     meets.sort(key=lambda d: d["season"], reverse=True)
@@ -765,6 +767,7 @@ async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
                 "sessionpath": row['sessionpath'],
                 "resultspath": row['resultspath'],
                 "scorespath": row['scorespath'],
+                "last_updated": row['last_updated'],
             }
         )
     return meets
@@ -797,6 +800,7 @@ async def fetch_latest_meet(db: asyncpg.Connection):
         "sessionpath": row['sessionpath'],
         "resultspath": row['resultspath'],
         "scorespath": row['scorespath'],
+        "last_updated": meet['last_updated'],
     }
 
 
@@ -1560,6 +1564,7 @@ async def update_meet_dtinfo(request: web.Request) -> web.Response:
             "sessionpath": meet['sessionpath'],
             "resultspath": meet['resultspath'],
             "scorespath": meet['scorespath'],
+            "last_updated": meet['last_updated'],
         }
     )
 
@@ -1620,6 +1625,7 @@ async def update_meet_geninfo(request: web.Request) -> web.Response:
             "sessionpath": meet['sessionpath'],
             "resultspath": meet['resultspath'],
             "scorespath": meet['scorespath'],
+            "last_updated": meet['last_updated'],
         }
     )
 
@@ -1674,8 +1680,10 @@ async def update_meet_filesinfo(request: web.Request) -> web.Response:
             "sessionpath": meet['sessionpath'],
             "resultspath": meet['resultspath'],
             "scorespath": meet['scorespath'],
+            "last_updated": meet['last_updated'],
         }
     )
+
 
 @router.get("/meets/{id}")
 @handle_json_error
