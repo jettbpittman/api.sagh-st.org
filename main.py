@@ -696,6 +696,7 @@ async def fetch_meet(db: asyncpg.Connection, id: int):
         "sessionpath": row['sessionpath'],
         "resultspath": row['resultspath'],
         "scorespath": row['scorespath'],
+        "psychpath": row['psychpath'],
         "last_updated": row['last_updated'].isoformat(),
     }
 
@@ -730,6 +731,7 @@ async def fetch_all_meets(db: asyncpg.Connection):
                 "sessionpath": row['sessionpath'],
                 "resultspath": row['resultspath'],
                 "scorespath": row['scorespath'],
+                "psychpath": row['psychpath'],
                 "last_updated": row['last_updated'].isoformat(),
             }
         )
@@ -767,6 +769,7 @@ async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
                 "sessionpath": row['sessionpath'],
                 "resultspath": row['resultspath'],
                 "scorespath": row['scorespath'],
+                "psychpath": row['psychpath'],
                 "last_updated": row['last_updated'].isoformat(),
             }
         )
@@ -800,6 +803,7 @@ async def fetch_latest_meet(db: asyncpg.Connection):
         "sessionpath": row['sessionpath'],
         "resultspath": row['resultspath'],
         "scorespath": row['scorespath'],
+        "psychpath": row['psychpath'],
         "last_updated": row['last_updated'].isoformat(),
     }
 
@@ -1564,6 +1568,7 @@ async def update_meet_dtinfo(request: web.Request) -> web.Response:
             "sessionpath": meet['sessionpath'],
             "resultspath": meet['resultspath'],
             "scorespath": meet['scorespath'],
+            "psychpath": meet['psychpath'],
             "last_updated": meet['last_updated'].isoformat(),
         }
     )
@@ -1625,6 +1630,7 @@ async def update_meet_geninfo(request: web.Request) -> web.Response:
             "sessionpath": meet['sessionpath'],
             "resultspath": meet['resultspath'],
             "scorespath": meet['scorespath'],
+            "psychpath": meet['psychpath'],
             "last_updated": meet['last_updated'].isoformat(),
         }
     )
@@ -1648,6 +1654,8 @@ async def update_meet_filesinfo(request: web.Request) -> web.Response:
         fields["resultspath"] = f"'{info['resultspath']}'"
     if "scorespath" in info:
         fields["scorespath"] = f"'{info['scorespath']}'"
+    if "psychpath" in info:
+        fields["psychpath"] = f"'{info['psychpath']}'"
     db = request.config_dict['DB']
     if fields:
         field_values = ""
@@ -1680,6 +1688,7 @@ async def update_meet_filesinfo(request: web.Request) -> web.Response:
             "sessionpath": meet['sessionpath'],
             "resultspath": meet['resultspath'],
             "scorespath": meet['scorespath'],
+            "psychpath": meet['psychpath'],
             "last_updated": meet['last_updated'].isoformat(),
         }
     )
