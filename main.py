@@ -34,7 +34,8 @@ venues = {
     "DC": "Don Cook Natatorium",
     "BL": "George Block Aquatic Center",
     "SC": "Schertz Aquatics Center",
-    "RR": "RRISD Aquatic Center"
+    "RR": "RRISD Aquatic Center",
+    "TBA": "TBA"
 }
 
 venue_colors = {
@@ -54,7 +55,8 @@ venue_colors = {
     "LC": "99CCFF",
     "BL": "66DD88",
     "SC": "99CCFF",
-    "RR": "FFCCFF"
+    "RR": "FFCCFF",
+    "TBA": "FFFFFF"
 }
 
 
