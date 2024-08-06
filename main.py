@@ -1637,9 +1637,9 @@ async def update_meet_filesinfo(request: web.Request) -> web.Response:
     if "sessionpath" in info:
         fields["sessionpath"] = f"'{info['sessionpath']}'"
     if "resultspath" in info:
-        fields["resultspath"] = info['resultspath']
+        fields["resultspath"] = f"'{info['resultspath']}'"
     if "scorespath" in info:
-        fields["scorespath"] = info['scorespath']
+        fields["scorespath"] = f"'{info['scorespath']}'"
     db = request.config_dict['DB']
     if fields:
         field_values = ""
