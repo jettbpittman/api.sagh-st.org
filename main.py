@@ -1766,13 +1766,12 @@ async def get_latest_meet(request: web.Request) -> web.Response:
 
 
 @router.get("/latest/meets/withintwoweeks")
-@handle_json_error
 async def get_meets_within_two_weeks(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     datenow = datetime.datetime.now()
-    dateweekbefore = datenow - (datetime.datetime.day * 7)
+    dateweekbefore = datenow - datetime.timedelta(days=7)
     dwb = f"{dateweekbefore.year}{dateweekbefore.month}{dateweekbefore.day}"
-    dateweeklater = datenow + (datetime.datetime.day * 7)
+    dateweeklater = datenow + datetime.timedelta(days=7)
     dwl = f"{dateweeklater.year}{dateweeklater.month}{dateweeklater.day}"
     meets = await db.fetch(f"SELECT * FROM meets where {dwb} < startdate < {dwl}")
     html = ""
