@@ -1720,6 +1720,11 @@ async def get_season_schedule(request: web.Request) -> web.Response:
     meets = await fetch_meets_by_season(db, season)
     html = '<tr><th style="width: 80%;">Meet</th><th style="width: 20%;">Files</th></tr>'
     for meet in meets:
+        times = ""
+        if meet['format'] == "pf":
+            times = f'Warmups @ {meet["pwarmups"]} (P) {meet["fwarmups"]} (F) | Meet @ {meet["pstart"]} (P) {meet["fstart"]} (F)'
+        else:
+            times = f'Warmups @ {meet["fwarmups"]} | Meet @ {meet["fstart"]}'
         files = ""
         if meet['infopath']:
             files += f'<b style="text-decoration: underline"><a href="{meet["infopath"]}">INFO</a></b><br>'
@@ -1731,7 +1736,7 @@ async def get_season_schedule(request: web.Request) -> web.Response:
             files += f'<b style="text-decoration: underline"><a href="{meet["resultspath"]}">RESULTS</a></b><br>'
         if meet['scorespath']:
             files += f'<b style="text-decoration: underline"><a href="{meet["scorespath"]}">SCORES</a></b><br>'
-        html += f'<tr class="meet-row"><td style="width: 80%; background-color: #{venue_colors[meet["venue"]]};" class="meet-info-col"><b>{meet["officialname"]}</b><br>{venues[meet["venue"]]} ({meet["venue"]})<br>{meet["date"]}<br>Warmups @ {meet["fwarmups"]} | Meet @ {meet["fstart"]}<br><b style="color: darkred">{meet["notes"]}</b></td><td style="width: 20%; background-color: #{venue_colors[meet["venue"]]};" class="meet-files-col">{files[:-4]}</td></tr>'
+        html += f'<tr class="meet-row"><td style="width: 80%; background-color: #{venue_colors[meet["venue"]]};" class="meet-info-col"><b>{meet["officialname"]}</b><br>{venues[meet["venue"]]} ({meet["venue"]})<br>{meet["date"]}<br>{times}<br><b style="color: darkred">{meet["notes"]}</b></td><td style="width: 20%; background-color: #{venue_colors[meet["venue"]]};" class="meet-files-col">{files[:-4]}</td></tr>'
     return web.Response(body=html)
 
 
