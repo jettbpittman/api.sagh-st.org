@@ -1764,7 +1764,7 @@ async def get_last_meet_update(request: web.Request) -> web.Response:
     meet = await db.fetchrow("SELECT * FROM meets WHERE season = $1 ORDER BY last_updated DESC LIMIT 1", int(season))
     #date = meet['last_update']
     #formatted_date = f'{date.day} {date.strftime("%B")[0:3].upper()} {date.year}'
-    return web.Response(body=meet)
+    return web.Response(body=str(meet))
 
 
 @router.get("/latest/meet")
