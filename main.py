@@ -1765,6 +1765,38 @@ async def get_latest_meet(request: web.Request) -> web.Response:
     return web.json_response(meet)
 
 
+@router.get("/latest/meets/withintwoweeks")
+@handle_json_error
+async def get_meets_within_two_weeks(request: web.Request) -> web.Response:
+    db = request.config_dict["DB"]
+    datenow = datetime.datetime.now()
+    dateweekbefore = datenow - (datetime.datetime.day * 7)
+    dwb = f"{dateweekbefore.year}{dateweekbefore.month}{dateweekbefore.day}"
+    dateweeklater = datenow + (datetime.datetime.day * 7)
+    dwl = f"{dateweeklater.year}{dateweeklater.month}{dateweeklater.day}"
+    meets = await db.fetch(f"SELECT * FROM meets where {dwb} < startdate < {dwl}")
+    html = ""
+    for meet in meets:
+        times = ""
+        if meet['format'] == "pf":
+            times = f'Warmups @ {meet["pwarmups"]} (P) {meet["fwarmups"]} (F) | Meet @ {meet["pstart"]} (P) {meet["fstart"]} (F)'
+        else:
+            times = f'Warmups @ {meet["fwarmups"]} | Meet @ {meet["fstart"]}'
+        files = ""
+        if meet['infopath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["infopath"]}">INFO</a></b><br>'
+        if meet['heatspath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["heatspath"]}">HEATS</a></b><br>'
+        if meet['sessionpath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["sessionpath"]}">SESSIONS</a></b><br>'
+        if meet['resultspath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["resultspath"]}">RESULTS</a></b><br>'
+        if meet['scorespath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["scorespath"]}">SCORES</a></b><br>'
+        html += f'<tr class="meet-row"><td style="width: 80%; background-color: #{venue_colors[meet["venue"]]};" class="meet-info-col"><b>{meet["officialname"]}</b><br>{venues[meet["venue"]]} ({meet["venue"]})<br>{meet["date"]}<br>{times}<br><b style="color: darkred">{meet["notes"]}</b></td><td style="width: 20%; background-color: #{venue_colors[meet["venue"]]};" class="meet-files-col">{files[:-4]}</td></tr>'
+    return web.Response(body=html)
+
+
 @router.get("/meets/{meet}/entries/{team}")
 @handle_json_error
 async def get_meet_entries_by_team(request: web.Request) -> web.Response:
