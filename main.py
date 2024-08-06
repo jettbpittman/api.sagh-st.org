@@ -689,6 +689,11 @@ async def fetch_meet(db: asyncpg.Connection, id: int):
         "fwarmups": row['fwarmups'],
         "pstart": row['pstart'],
         "fstart": row['fstart'],
+        "infopath": row['infopath'],
+        "heatspath": row['heatspath'],
+        "sessionpath": row['sessionpath'],
+        "resultspath": row['resultspath'],
+        "scorespath": row['scorespath'],
     }
 
 
@@ -717,6 +722,11 @@ async def fetch_all_meets(db: asyncpg.Connection):
                 "fwarmups": row['fwarmups'],
                 "pstart": row['pstart'],
                 "fstart": row['fstart'],
+                "infopath": row['infopath'],
+                "heatspath": row['heatspath'],
+                "sessionpath": row['sessionpath'],
+                "resultspath": row['resultspath'],
+                "scorespath": row['scorespath'],
             }
         )
     meets.sort(key=lambda d: d["season"], reverse=True)
@@ -748,6 +758,11 @@ async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
                 "fwarmups": row['fwarmups'],
                 "pstart": row['pstart'],
                 "fstart": row['fstart'],
+                "infopath": row['infopath'],
+                "heatspath": row['heatspath'],
+                "sessionpath": row['sessionpath'],
+                "resultspath": row['resultspath'],
+                "scorespath": row['scorespath'],
             }
         )
     return meets
@@ -775,6 +790,11 @@ async def fetch_latest_meet(db: asyncpg.Connection):
         "fwarmups": row['fwarmups'],
         "pstart": row['pstart'],
         "fstart": row['fstart'],
+        "infopath": row['infopath'],
+        "heatspath": row['heatspath'],
+        "sessionpath": row['sessionpath'],
+        "resultspath": row['resultspath'],
+        "scorespath": row['scorespath'],
     }
 
 
@@ -1533,6 +1553,11 @@ async def update_meet_dtinfo(request: web.Request) -> web.Response:
             "fwarmups": meet['fwarmups'],
             "pstart": meet['pstart'],
             "fstart": meet['fstart'],
+            "infopath": meet['infopath'],
+            "heatspath": meet['heatspath'],
+            "sessionpath": meet['sessionpath'],
+            "resultspath": meet['resultspath'],
+            "scorespath": meet['scorespath'],
         }
     )
 
@@ -1588,9 +1613,67 @@ async def update_meet_geninfo(request: web.Request) -> web.Response:
             "fwarmups": meet['fwarmups'],
             "pstart": meet['pstart'],
             "fstart": meet['fstart'],
+            "infopath": meet['infopath'],
+            "heatspath": meet['heatspath'],
+            "sessionpath": meet['sessionpath'],
+            "resultspath": meet['resultspath'],
+            "scorespath": meet['scorespath'],
         }
     )
 
+
+@router.patch("/meets/{id}/filesinfo")
+async def update_meet_filesinfo(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=2)
+    if a.status != 200:
+        return a
+    info = await request.json()
+    fields = {}
+    meet_id = request.match_info["id"]
+    if "infopath" in info:
+        fields["infopath"] = f"'{info['infopath']}'"
+    if "heatspath" in info:
+        fields["heatspath"] = f"'{info['heatspath']}'"
+    if "sessionpath" in info:
+        fields["sessionpath"] = f"'{info['sessionpath']}'"
+    if "resultspath" in info:
+        fields["resultspath"] = info['resultspath']
+    if "scorespath" in info:
+        fields["scorespath"] = info['scorespath']
+    db = request.config_dict['DB']
+    if fields:
+        field_values = ""
+        for field in fields:
+            field_values += f"{field} = {fields[field]}, "
+        await db.execute(
+            f"UPDATE meets SET {field_values[:-2]} WHERE id = $1", int(meet_id)
+        )
+    meet = await db.fetchrow(
+        "SELECT * FROM meets WHERE id = $1", int(meet_id)
+    )
+    return web.json_response(
+        {
+            "id": meet_id,
+            "name": meet['name'],
+            "venue": meet['venue'],
+            "designator": meet['designator'],
+            "startdate": meet['startdate'],
+            "enddate": meet['enddate'],
+            "season": meet['season'],
+            "concluded": meet['concluded'],
+            "host": meet['host'],
+            "format": meet['format'],
+            "pwarmups": meet['pwarmups'],
+            "fwarmups": meet['fwarmups'],
+            "pstart": meet['pstart'],
+            "fstart": meet['fstart'],
+            "infopath": meet['infopath'],
+            "heatspath": meet['heatspath'],
+            "sessionpath": meet['sessionpath'],
+            "resultspath": meet['resultspath'],
+            "scorespath": meet['scorespath'],
+        }
+    )
 
 @router.get("/meets/{id}")
 @handle_json_error
