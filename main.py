@@ -1633,7 +1633,7 @@ async def get_season_schedule(request: web.Request) -> web.Response:
     meets = await fetch_meets_by_season(db, season)
     html = ""
     for meet in meets:
-        html += f'<tr style="background-color: #{venue_colors[meet["venue"]]};"><td style="width: 80%;" class="meet-info-col"><b>{meet["officialname"]}</b><br>{venues[meet["venue"]]}<br>{meet["date"]}<br>Warmups @ {meet["fwamrups"]} | Meet @ {meet["fstart"]}<br>{meet["notes"]}</td><td style="width: 20%" class="meet-files-col"><i>PDF</i><br><i>RESULTS</i><br><i>SCORES</i></td></tr>'
+        html += f'<tr style="background-color: #{venue_colors[meet["venue"]]};"><td style="width: 80%;" class="meet-info-col"><b>{meet["officialname"]}</b><br>{venues[meet["venue"]]}<br>{meet["date"]}<br>Warmups @ {meet["fwarmups"]} | Meet @ {meet["fstart"]}<br>{meet["notes"]}</td><td style="width: 20%" class="meet-files-col"><i>PDF</i><br><i>RESULTS</i><br><i>SCORES</i></td></tr>'
     return web.Response(body=html)
 
 
