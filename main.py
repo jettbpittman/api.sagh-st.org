@@ -35,7 +35,8 @@ venues = {
     "BL": "George Block Aquatic Center",
     "SC": "Schertz Aquatics Center",
     "RR": "RRISD Aquatic Center",
-    "TBA": "TBA"
+    "TBA": "TBA",
+    "UNK": "Unknown",
 }
 
 venue_colors = {
@@ -56,7 +57,8 @@ venue_colors = {
     "BL": "66DD88",
     "SC": "99CCFF",
     "RR": "FFCCFF",
-    "TBA": "FFFFFF"
+    "TBA": "FFFFFF",
+    "UNK": "FFFFFF"
 }
 
 
@@ -1729,7 +1731,7 @@ async def get_season_schedule(request: web.Request) -> web.Response:
             files += f'<b style="text-decoration: underline"><a href="{meet["resultspath"]}">RESULTS</a></b><br>'
         if meet['scorespath']:
             files += f'<b style="text-decoration: underline"><a href="{meet["scorespath"]}">SCORES</a></b><br>'
-        html += f'<tr class="meet-row"><td style="width: 80%; background-color: #{venue_colors[meet["venue"]]};" class="meet-info-col"><b>{meet["officialname"]}</b><br>{venues[meet["venue"]]} ({meet["venue"]})<br>{meet["date"]}<br>Warmups @ {meet["fwarmups"]} | Meet @ {meet["fstart"]}<br>{meet["notes"]}</td><td style="width: 20%; background-color: #{venue_colors[meet["venue"]]};" class="meet-files-col">{files[:-4]}</td></tr>'
+        html += f'<tr class="meet-row"><td style="width: 80%; background-color: #{venue_colors[meet["venue"]]};" class="meet-info-col"><b>{meet["officialname"]}</b><br>{venues[meet["venue"]]} ({meet["venue"]})<br>{meet["date"]}<br>Warmups @ {meet["fwarmups"]} | Meet @ {meet["fstart"]}<br><b style="color: darkred">{meet["notes"]}</b></td><td style="width: 20%; background-color: #{venue_colors[meet["venue"]]};" class="meet-files-col">{files[:-4]}</td></tr>'
     return web.Response(body=html)
 
 
