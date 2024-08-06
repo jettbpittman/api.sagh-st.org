@@ -1773,7 +1773,7 @@ async def get_meets_within_two_weeks(request: web.Request) -> web.Response:
     dwb = f"{dateweekbefore.year}{dateweekbefore.month}{dateweekbefore.day}"
     dateweeklater = datenow + datetime.timedelta(days=7)
     dwl = f"{dateweeklater.year}{dateweeklater.month}{dateweeklater.day}"
-    meets = await db.fetch(f"SELECT * FROM meets where startdate BETWEEN {dwb} AND {dwl}")
+    meets = await db.fetch(f"SELECT * FROM meets where startdate BETWEEN {str(dwb)} AND {str(dwl)}")
     html = ""
     for meet in meets:
         times = ""
