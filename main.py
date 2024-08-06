@@ -1792,7 +1792,7 @@ async def get_meets_within_two_weeks(request: web.Request) -> web.Response:
             files += f'<b style="text-decoration: underline"><a href="{meet["resultspath"]}">RESULTS</a></b><br>'
         if meet['scorespath']:
             files += f'<b style="text-decoration: underline"><a href="{meet["scorespath"]}">SCORES</a></b><br>'
-        html += f'<tr class="meet-row"><td style="width: 80%; background-color: #{venue_colors[meet["venue"]]};" class="meet-info-col"><b>{meet["startdate"][:4]} {meet["host"]} {meet["name"]}</b><br>{venues[meet["venue"]]} ({meet["venue"]})<br>{meet["date"]}<br>{times}<br><b style="color: darkred">{meet["notes"]}</b></td><td style="width: 20%; background-color: #{venue_colors[meet["venue"]]};" class="meet-files-col">{files[:-4]}</td></tr>'
+        html += f'<tr class="meet-row"><td style="width: 80%; background-color: #{venue_colors[meet["venue"]]};" class="meet-info-col"><b>{meet["startdate"][:4]} {meet["host"]} {meet["name"]}</b><br>{venues[meet["venue"]]} ({meet["venue"]})<br>{create_date(meet["startdate"], meet["enddate"])}<br>{times}<br><b style="color: darkred">{meet["notes"]}</b></td><td style="width: 20%; background-color: #{venue_colors[meet["venue"]]};" class="meet-files-col">{files[:-4]}</td></tr>'
     return web.Response(body=html)
 
 
