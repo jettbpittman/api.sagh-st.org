@@ -1042,7 +1042,7 @@ async def create_user(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     await db.execute(
         "INSERT INTO users (id, name, password, email, permissions, username) VALUES ($1, $2, $3, $4, $5, $6)",
-        id, name, password, email, permissions, username,
+        id, name, password, email, int(permissions), username,
     )
     return web.json_response(
         {
