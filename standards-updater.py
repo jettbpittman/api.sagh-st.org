@@ -26,7 +26,7 @@ con = psycopg2.connect(
 cur = con.cursor()
 
 
-if 12 > date.month >= 9:
+if 12 > date.month >= 8:
     tisca = True
     standards = [["TISCA", f"T{TISCA_YR}"]]
 else:
