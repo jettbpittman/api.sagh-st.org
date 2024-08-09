@@ -932,7 +932,7 @@ async def create_standard(request: web.Request) -> web.Response:
     event = info['event']
     await db.execute(
         "INSERT INTO standards (name, authority, min_time, code, year, age, gender, short_name, course)"
-        " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", name, org, min_time, code, year, age, gender, short_name, course
+        " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", name, org, min_time, code, int(year), age, gender, short_name, course
     )
     await db.execute(
         "UPDATE standards set event = $1 where code = $2", event, code
