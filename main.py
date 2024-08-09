@@ -1763,6 +1763,7 @@ async def get_last_meet_update(request: web.Request) -> web.Response:
     season = request.match_info["code"]
     meet = await db.fetchrow("SELECT * FROM meets WHERE season = $1 ORDER BY last_updated DESC LIMIT 1", int(season))
     date = meet['last_updated']
+    date = date - datetime.timedelta(hours=5)
     formatted_date = f'{date.day} {date.strftime("%B")[0:3].upper()} {date.year}'
     return web.Response(body=formatted_date)
 
