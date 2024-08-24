@@ -6,6 +6,8 @@ import random
 import os
 import base64
 import secrets
+import smtplib
+import ssl
 from passlib.hash import argon2
 from typing import AsyncIterator, Awaitable, Callable
 from tabulate import tabulate
@@ -68,6 +70,29 @@ class NotFoundException(BaseException):
 
 with open("creds.json", "r") as f:
     creds = json.load(f)
+
+
+class EmailSender:
+    def welcome(self, email, name):
+        message = f"""\
+        Subject: ghmvswim.org New User Registration
+        
+        
+        Hey {name}!
+        
+        Welcome to ghmvswim.org, your go-to spot for all things GHMV swim!
+        
+        If you are a swimmer or parent and would like to link your account to a swimmer, please click the link here [insert link] to request linking.
+        
+        Sincerely,
+        
+        Jett Pittman
+        Webmaster, ghmvswim.org
+        jett@ghmvswim.org
+        """
+        with smtplib.SMTP_SSL(creds['email']['smtp_url'], creds['email']['smtp_port'], context=ssl.create_default_context()) as server:
+            server.login(creds['email']['username'], creds['email']['password'])
+            server.sendmail(creds['email']['sender_email'], email, message)
 
 
 def create_date(start, end = None):
@@ -1023,6 +1048,31 @@ async def auth_check(request: web.Request) -> web.Response:
 
 
 # User Queries
+@router.post("/users/register")
+async def register_user(request: web.Request) -> web.Response:
+    info = await request.json()
+    name = info['name']
+    username = info['username']
+    email = info['email']
+    password = argon2.hash(info["password"])
+    id = generate_id(5)
+    db = request.config_dict["DB"]
+    await db.execute(
+        "INSERT INTO users (id, name, password, email, permissions, username) VALUES ($1, $2, $3, $4, $5, $6)",
+        id, name, password, email, int(0), username,
+    )
+    EmailSender.welcome(email, name)
+    return web.json_response(
+        {
+            "id": id,
+            "name": name,
+            "username": username,
+            "email": email,
+            "permissions": 0,
+        }
+    )
+
+
 @router.post("/users")
 @handle_json_error
 async def create_user(request: web.Request) -> web.Response:
