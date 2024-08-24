@@ -76,6 +76,7 @@ class EmailSender:
     def welcome(self, email, name):
         message = f"""\
         From: {creds['email']['sender_email']}\
+        To: {email}\
         Subject: ghmvswim.org New User Registration
         
         
