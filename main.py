@@ -80,7 +80,8 @@ class EmailSender:
         message['From'] = creds['email']['sender_email']
         message['To'] = email
         message['Subject'] = "ghmvswim.org New User Registration"
-        text = f"""Hey {name}!
+        text = f"""\
+        Hey {name}!
         
         Welcome to ghmvswim.org, your go-to spot for all things GHMV swim!
         
