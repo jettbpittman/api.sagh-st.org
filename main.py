@@ -1061,7 +1061,7 @@ async def register_user(request: web.Request) -> web.Response:
         "INSERT INTO users (id, name, password, email, permissions, username) VALUES ($1, $2, $3, $4, $5, $6)",
         id, name, password, email, int(0), username,
     )
-    EmailSender.welcome(email, name)
+    EmailSender().welcome(email, name)
     return web.json_response(
         {
             "id": id,
