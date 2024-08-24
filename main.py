@@ -75,6 +75,7 @@ with open("creds.json", "r") as f:
 class EmailSender:
     def welcome(self, email, name):
         message = f"""\
+        From: {creds['email']['sender_email']}
         Subject: ghmvswim.org New User Registration
         
         
