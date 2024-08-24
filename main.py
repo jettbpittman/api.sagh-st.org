@@ -74,19 +74,19 @@ with open("creds.json", "r") as f:
 
 class EmailSender:
     def welcome(self, email, name):
-        message = f"""\
-        From: {creds['email']['sender_email']}\
-        To: {email}\
+        message = f"""
+        From: {creds['email']['sender_email']}\n
+        To: {email}\n
         Subject: ghmvswim.org New User Registration
-        
-        
-        Hey {name}!
-        
-        Welcome to ghmvswim.org, your go-to spot for all things GHMV swim!
-        
+        \n
+        \n
+        Hey {name}!\n
+        \n
+        Welcome to ghmvswim.org, your go-to spot for all things GHMV swim!\n
+        \n
         If you are a swimmer or parent and would like to link your account to a swimmer, please click the link here [insert link] to request linking.
-        
-        Sincerely,
+        \n
+        Sincerely,\n
         
         Jett Pittman
         Webmaster, ghmvswim.org
