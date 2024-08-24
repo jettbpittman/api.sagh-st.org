@@ -8,6 +8,8 @@ import base64
 import secrets
 import smtplib
 import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from passlib.hash import argon2
 from typing import AsyncIterator, Awaitable, Callable
 from tabulate import tabulate
@@ -74,27 +76,27 @@ with open("creds.json", "r") as f:
 
 class EmailSender:
     def welcome(self, email, name):
-        message = f"""
-        From: {creds['email']['sender_email']}\n
-        To: {email}\n
-        Subject: ghmvswim.org New User Registration
-        \n
-        \n
-        Hey {name}!\n
-        \n
+        message = MIMEMultipart("alternative")
+        message['From'] = creds['email']['sender_email']
+        message['To'] = email
+        message['Subject'] = "ghmvswim.org New User Registration"
+        text = """Hey {name}!\n
+        
         Welcome to ghmvswim.org, your go-to spot for all things GHMV swim!\n
-        \n
+        
         If you are a swimmer or parent and would like to link your account to a swimmer, please click the link here [insert link] to request linking.
-        \n
-        Sincerely,\n
+        
+        Sincerely,
         
         Jett Pittman
         Webmaster, ghmvswim.org
         jett@ghmvswim.org
         """
+
+        message.attach(MIMEText(text, "plain"))
         with smtplib.SMTP_SSL(creds['email']['smtp_url'], creds['email']['smtp_port'], context=ssl.create_default_context()) as server:
             server.login(creds['email']['username'], creds['email']['password'])
-            server.sendmail(creds['email']['sender_email'], email, message)
+            server.sendmail(creds['email']['sender_email'], email, message.as_string())
 
 
 def create_date(start, end = None):
