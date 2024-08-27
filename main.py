@@ -20,7 +20,6 @@ import aiohttp_cors
 
 router = web.RouteTableDef()
 
-
 venues = {
     "AH": "Alamo Heights Natatorium",
     "AM": "Texas A&M Student Recreation Center Natatorium",
@@ -74,29 +73,28 @@ with open("creds.json", "r") as f:
     creds = json.load(f)
 
 
-class EmailSender:
-    def welcome(self, email, name):
-        message = MIMEMultipart("alternative")
-        message['From'] = creds['email']['sender_email']
-        message['To'] = email
-        message['Subject'] = "ghmvswim.org New User Registration"
-        text = f"""
-        Hey {name}!
-        Welcome to ghmvswim.org, your go-to spot for all things GHMV swim!
-        If you are a swimmer or parent and would like to link your account to a swimmer, please click the link here [insert link] to request linking.
-        Sincerely,
-        Jett Pittman
-        Webmaster, ghmvswim.org
-        jett@ghmvswim.org
-        """
+def welcome_email(email, name):
+    message = MIMEMultipart("alternative")
+    message['From'] = creds['email']['sender_email']
+    message['To'] = email
+    message['Subject'] = "ghmvswim.org New User Registration"
+    text = f"""Hey {name}!
+    Welcome to ghmvswim.org, your go-to spot for all things GHMV swim!
+    If you are a swimmer or parent and would like to link your account to a swimmer, please click the link here [insert link] to request linking.
+    Sincerely,
+    Jett Pittman
+    Webmaster, ghmvswim.org
+    jett@ghmvswim.org
+    """
 
-        message.attach(MIMEText(text, "plain"))
-        with smtplib.SMTP_SSL(creds['email']['smtp_url'], creds['email']['smtp_port'], context=ssl.create_default_context()) as server:
-            server.login(creds['email']['username'], creds['email']['password'])
-            server.sendmail(creds['email']['sender_email'], email, message.as_string())
+    message.attach(MIMEText(text, "plain"))
+    with smtplib.SMTP_SSL(creds['email']['smtp_url'], creds['email']['smtp_port'],
+                          context=ssl.create_default_context()) as server:
+        server.login(creds['email']['username'], creds['email']['password'])
+        server.sendmail(creds['email']['sender_email'], email, message.as_string())
 
 
-def create_date(start, end = None):
+def create_date(start, end=None):
     try:
         if end is None:
             d = datetime.datetime.strptime(start, "%Y%m%d")
@@ -173,10 +171,10 @@ def generate_id(id_type: int, year: int = 0, join_date: int = None) -> int:
         # Set epoch to 1 September, 2014 00:00:00+0000
         ts = ts - 1409547600
     return (
-        (int(ts) << 16)
-        + (year << 20)
-        + (id_type << 24)
-        + (random.randint(1, 1000) << 32)
+            (int(ts) << 16)
+            + (year << 20)
+            + (id_type << 24)
+            + (random.randint(1, 1000) << 32)
     )
 
 
@@ -478,7 +476,8 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
 
 async def fetch_team_roster(db: asyncpg.Connection, id: str):
     rows = await db.fetch(
-        "SELECT * FROM swimmers WHERE team = $1 AND active = true AND manager = false ORDER BY last_name, first_name, middle_name", str(id)
+        "SELECT * FROM swimmers WHERE team = $1 AND active = true AND manager = false ORDER BY last_name, first_name, middle_name",
+        str(id)
     )
     roster = []
     for swimmer in rows:
@@ -835,7 +834,8 @@ async def fetch_latest_meet(db: asyncpg.Connection):
 
 
 async def fetch_all_users(db: asyncpg.Connection):
-    rows = await db.fetch("SELECT id, username, name, email, permissions, active, linked_swimmer, latest_access FROM users")
+    rows = await db.fetch(
+        "SELECT id, username, name, email, permissions, active, linked_swimmer, latest_access FROM users")
     if not rows:
         raise NotFoundException(f"No users found!")
     users = []
@@ -861,19 +861,19 @@ async def fetch_user(db: asyncpg.Connection, id: int):
     if not row:
         raise NotFoundException(f"No user found!")
     return {
-                "id": row['id'],
-                "username": row["username"],
-                "name": row["name"],
-                "email": row["email"],
-                "permissions": row["permissions"],
-                "active": row["active"],
-                "linked_swimmer": row['linked_swimmer'],
-                "latest_access": row['latest_access']
-            }
+        "id": row['id'],
+        "username": row["username"],
+        "name": row["name"],
+        "email": row["email"],
+        "permissions": row["permissions"],
+        "active": row["active"],
+        "linked_swimmer": row['linked_swimmer'],
+        "latest_access": row['latest_access']
+    }
 
 
 def handle_json_error(
-    func: Callable[[web.Request], Awaitable[web.Response]]
+        func: Callable[[web.Request], Awaitable[web.Response]]
 ) -> Callable[[web.Request], Awaitable[web.Response]]:
     async def handler(request: web.Request) -> web.Response:
         try:
@@ -958,7 +958,8 @@ async def create_standard(request: web.Request) -> web.Response:
     event = info['event']
     await db.execute(
         "INSERT INTO standards (name, authority, min_time, code, year, age, gender, short_name, course)"
-        " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", name, org, min_time, code, int(year), age, gender, short_name, course
+        " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", name, org, min_time, code, int(year), age, gender, short_name,
+        course
     )
     await db.execute(
         "UPDATE standards set event = $1 where code = $2", event, code
@@ -979,8 +980,9 @@ async def submit_attendance(request: web.Request) -> web.Response:
     type = payload.pop('type')
     resp = {"date": date, "type": type}
     for swimmer in payload:
-        await db.execute("INSERT INTO attendance (date, swimmer, status, type) VALUES ($1, $2, $3, $4) ON CONFLICT (date, "
-                         "swimmer, type) DO UPDATE SET status = $3", date, int(swimmer), payload[swimmer], type)
+        await db.execute(
+            "INSERT INTO attendance (date, swimmer, status, type) VALUES ($1, $2, $3, $4) ON CONFLICT (date, "
+            "swimmer, type) DO UPDATE SET status = $3", date, int(swimmer), payload[swimmer], type)
         resp[swimmer] = payload[swimmer]
     return web.json_response(resp)
 
@@ -1048,8 +1050,33 @@ async def auth_check(request: web.Request) -> web.Response:
     )
 
 
+@router.post("/calendar/add")
+@handle_json_error
+async def add_calendar_event(request: web.Request) -> web.Response:
+    info = await request.json()
+    a = await auth_required(request, permissions=4)
+    if a.status != 200:
+        return a
+    name = info['name']
+    date = info['date']
+    time = info['time']
+    urgent = info['urgent']
+    db = request.config_dict["DB"]
+    await db.execute("INSERT INTO calendar (name, date, time, urgent) VALUES ($1, $2, $3, $4)", name, date, time,
+                     urgent)
+    return web.json_response(
+        {
+            "name": name,
+            "date": date,
+            "time": time,
+            "urgent": urgent
+        }
+    )
+
+
 # User Queries
 @router.post("/users/register")
+@handle_json_error
 async def register_user(request: web.Request) -> web.Response:
     info = await request.json()
     name = info['name']
@@ -1062,7 +1089,7 @@ async def register_user(request: web.Request) -> web.Response:
         "INSERT INTO users (id, name, password, email, permissions, username) VALUES ($1, $2, $3, $4, $5, $6)",
         id, name, password, email, int(0), username,
     )
-    EmailSender().welcome(email, name)
+    # welcome_email(email, name)
     return web.json_response(
         {
             "id": id,
@@ -1072,6 +1099,61 @@ async def register_user(request: web.Request) -> web.Response:
             "permissions": 0,
         }
     )
+
+
+@router.post("/users/request-linking")
+async def req_linking(request: web.Request) -> web.Response:
+    info = await request.json()
+    a = await auth_required(request, permissions=0)
+    if a.status != 200:
+        return a
+    user_id = info['user_id']
+    if a.user_id == user_id:
+        pass
+    elif (await auth_required(request, permissions=4)).status == 200:
+        pass
+    else:
+        return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
+    db = request.config_dict["DB"]
+    try:
+        await db.execute("INSERT INTO linking_requests (user_id, swimmer_id) VALUES ($1, $2)", user_id,
+                         info['swimmer_id'])
+        return web.json_response({"status": "success", "reason": "submitted request"}, status=200)
+    except asyncpg.UniqueViolationError:
+        return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
+
+
+@router.post("/users/approve-linking")
+async def approve_linking(request: web.Request) -> web.Response:
+    info = await request.json()
+    a = await auth_required(request, permissions=4)
+    if a.status != 200:
+        return a
+    user_id = info['user_id']
+    swimmer_id = info['swimmer_id']
+    db = request.config_dict["DB"]
+    await db.execute("UPDATE users SET linked_swimmer = $1 WHERE id = $2", swimmer_id, user_id)
+    try:
+        await db.execute(
+            "UPDATE linking_requests SET status = 'approved' AND approved_by = $1 WHERE user_id = $2 AND swimmer_id = $3",
+            a.user_id, user_id, swimmer_id)
+    except:
+        pass
+    return web.json_response({"status": "success", "reason": "linked swimmer"}, status=200)
+
+
+@router.post("/users/reject-linking")
+async def reject_linking(request: web.Request) -> web.Response:
+    info = await request.json()
+    a = await auth_required(request, permissions=4)
+    if a.status != 200:
+        return a
+    user_id = info['user_id']
+    swimmer_id = info['swimmer_id']
+    db = request.config_dict["DB"]
+    await db.execute("UPDATE linking_requests SET status = 'rejected' WHERE user_id = $1 AND swimmer_id = $2", user_id,
+                     swimmer_id)
+    return web.json_response({"status": "success", "reason": "rejected request"}, status=200)
 
 
 @router.post("/users")
@@ -1989,10 +2071,10 @@ async def fetch_top5_school(db):
             counter += 1
     date = datetime.datetime.now()
     return (
-        f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">SCHOOL '
-        f'RECORDS</span></h2>\n<p'
-        f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
-        + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
+            f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">SCHOOL '
+            f'RECORDS</span></h2>\n<p'
+            f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
+            + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
     )
 
 
@@ -2048,10 +2130,10 @@ async def fetch_top5_program(db):
             counter += 1
     date = datetime.datetime.now()
     return (
-        f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">PROGRAM '
-        f'RECORDS</span></h2>\n<p'
-        f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
-        + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
+            f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">PROGRAM '
+            f'RECORDS</span></h2>\n<p'
+            f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
+            + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
     )
 
 
@@ -2107,12 +2189,11 @@ async def fetch_top5_relays(db):
             counter += 1
     date = datetime.datetime.now()
     return (
-        f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">RELAY '
-        f'RECORDS</span></h2>\n<p'
-        f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
-        + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
+            f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">RELAY '
+            f'RECORDS</span></h2>\n<p'
+            f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
+            + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
     )
-
 
 
 @router.get("/records/top5/school")

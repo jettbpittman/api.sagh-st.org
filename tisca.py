@@ -40,12 +40,12 @@ for swimmer in swimmers:
             else:
                 events.append(entry[3])
                 best_times[entry[3]] = entry[5]
-            cur.execute(f"SELECT name FROM meets WHERE id = {entry[2]}")
+            cur.execute(f"SELECT name, startdate, host FROM meets WHERE id = {entry[2]}")
             m = cur.fetchone()
             try:
-                tiscas[name].append({"event": entry[3], "time": entry[5], "meet": m[0]})
+                tiscas[name].append({"event": entry[3], "time": entry[5], "meet": m[0], "year": m[1][:-4], "host": m[2]})
             except KeyError:
-                tiscas[name] = [{"event": entry[3], "time": entry[5], "meet": m[0]}]
+                tiscas[name] = [{"event": entry[3], "time": entry[5], "meet": m[0], "year": m[1][:-4], "host": m[2]}]
 
 myKeys = list(tiscas.keys())
 myKeys.sort()
@@ -57,8 +57,9 @@ output = f"TISCA Qualifiers (as of {date.day} {date.strftime('%B')[0:3].upper()}
 for i in sorted_tiscas:
     output += i + "\n===========\n"
     for e in tiscas[i]:
-        output += f"{e['event']}  -  {e['time']}  -  {e['meet']}\n"
+        output += f"{e['event']}  -  {e['time']}  -  {e['year']} {e['host']} {e['meet']}\n"
     output += "\n"
+output += f"GENERATED: {datetime.now().strftime('%m/%d/%Y %H:%M:%S')}\nghmvswim.org"
 print(output)
 
 with open("tisca_qualifiers.txt", "w") as f:
