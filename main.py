@@ -1129,7 +1129,7 @@ async def linking_requests(request: web.Request) -> web.Response:
     if a.status != 200:
         return a
     db = request.config_dict["DB"]
-    reqs = await db.fetch("SELECT * FROM linking_requests WHERE user_id = $1", a.user_id)
+    reqs = await db.fetch("SELECT * FROM linking_requests WHERE user_id = $1", int(a.user_id))
     reqs_list = []
     for req in reqs:
         reqs_list.append({"swimmer_id": req['swimmer_id'], "submitted_at": req["created_at"], "status": req['status']})
