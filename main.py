@@ -1123,7 +1123,7 @@ async def req_linking(request: web.Request) -> web.Response:
         return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
 
 
-@router.get("/users/linking/request/{id}")
+@router.get("/users/linking/requests/{id}")
 async def linking_requests(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
