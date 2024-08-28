@@ -1101,7 +1101,7 @@ async def register_user(request: web.Request) -> web.Response:
     )
 
 
-@router.post("/users/request-linking")
+@router.post("/users/linking/request")
 async def req_linking(request: web.Request) -> web.Response:
     info = await request.json()
     a = await auth_required(request, permissions=0)
@@ -1123,7 +1123,7 @@ async def req_linking(request: web.Request) -> web.Response:
         return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
 
 
-@router.get("/users/linking-requests/{id}")
+@router.get("/users/linking/request/{id}")
 async def linking_requests(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
@@ -1136,7 +1136,7 @@ async def linking_requests(request: web.Request) -> web.Response:
         reqs_list.append({"swimmer_id": req['swimmer_id'], "submitted_at": req["created_at"], "status": req['status']})
 
 
-@router.post("/users/approve-linking")
+@router.post("/users/linking/approve")
 async def approve_linking(request: web.Request) -> web.Response:
     info = await request.json()
     a = await auth_required(request, permissions=4)
@@ -1155,7 +1155,7 @@ async def approve_linking(request: web.Request) -> web.Response:
     return web.json_response({"status": "success", "reason": "linked swimmer"}, status=200)
 
 
-@router.post("/users/reject-linking")
+@router.post("/users/linking/reject")
 async def reject_linking(request: web.Request) -> web.Response:
     info = await request.json()
     a = await auth_required(request, permissions=4)
