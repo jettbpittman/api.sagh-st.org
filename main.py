@@ -1123,13 +1123,14 @@ async def req_linking(request: web.Request) -> web.Response:
         return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
 
 
-@router.get("/users/linking-requests")
+@router.get("/users/linking-requests/{id}")
 async def linking_requests(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
+    user_id = request.match_info["id"]
     db = request.config_dict["DB"]
-    reqs = await db.fetch("SELECT * FROM linking_requests WHERE user_id = $1", int(a.user_id))
+    reqs = await db.fetch("SELECT * FROM linking_requests WHERE user_id = $1", int(user_id))
     reqs_list = []
     for req in reqs:
         reqs_list.append({"swimmer_id": req['swimmer_id'], "submitted_at": req["created_at"], "status": req['status']})
