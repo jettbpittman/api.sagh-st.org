@@ -1131,6 +1131,19 @@ async def linking_requests(request: web.Request) -> web.Response:
     return web.json_response(reqs_list)
 
 
+@router.get("/users/linking/requestqueue")
+async def linking_requests(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=4)
+    if a.status != 200:
+        return a
+    user_id = request.match_info["id"]
+    db = request.config_dict["DB"]
+    reqs = await db.fetch("SELECT * FROM linking_requests")
+    reqs_list = []
+    for req in reqs:
+        reqs_list.append({"swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status']})
+    return web.json_response(reqs_list)
+
 @router.post("/users/linking/approve")
 async def approve_linking(request: web.Request) -> web.Response:
     info = await request.json()
