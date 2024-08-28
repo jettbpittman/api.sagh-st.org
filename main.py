@@ -867,7 +867,7 @@ async def fetch_user(db: asyncpg.Connection, id: int):
         "email": row["email"],
         "permissions": row["permissions"],
         "active": row["active"],
-        "linked_swimmer": row['linked_swimmer'],
+        "linked_swimmer": await fetch_swimmer_lite(db, row['linked_swimmer']),
         "latest_access": row['latest_access']
     }
 
