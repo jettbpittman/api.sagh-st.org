@@ -1134,6 +1134,7 @@ async def linking_requests(request: web.Request) -> web.Response:
     reqs_list = []
     for req in reqs:
         reqs_list.append({"swimmer_id": req['swimmer_id'], "submitted_at": req["created_at"], "status": req['status']})
+    return web.json_response(reqs_list)
 
 
 @router.post("/users/linking/approve")
