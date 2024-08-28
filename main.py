@@ -1108,26 +1108,26 @@ async def req_linking(request: web.Request) -> web.Response:
     if a.status != 200:
         return a
     user_id = info['user_id']
+    verf_code = info['verification_code']
     db = request.config_dict["DB"]
     try:
-        await db.execute("INSERT INTO linking_requests (user_id, swimmer_id) VALUES ($1, $2)", int(user_id),
-                         int(info['swimmer_id']))
+        await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, verification_code) VALUES ($1, $2, $3)", int(user_id),
+                         int(info['swimmer_id']), verf_code)
         return web.json_response({"status": "success", "reason": "submitted request"}, status=200)
     except asyncpg.UniqueViolationError:
         return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
 
 
-@router.get("/users/linking/requests/{id}")
+@router.get("/users/linking/requests")
 async def linking_requests(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    user_id = request.match_info["id"]
     db = request.config_dict["DB"]
-    reqs = await db.fetch("SELECT * FROM linking_requests WHERE user_id = $1", int(user_id))
+    reqs = await db.fetch("SELECT * FROM linking_requests WHERE user_id = $1", int(a.user_id))
     reqs_list = []
     for req in reqs:
-        reqs_list.append({"swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status']})
+        reqs_list.append({"swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'], "verification_code": req['verification_code']})
     return web.json_response(reqs_list)
 
 
@@ -1140,7 +1140,7 @@ async def linking_requests(request: web.Request) -> web.Response:
     reqs = await db.fetch("SELECT * FROM linking_requests WHERE status = 'unapproved'")
     reqs_list = []
     for req in reqs:
-        reqs_list.append({"user": await fetch_user(db, req['user_id']), "swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status']})
+        reqs_list.append({"user": await fetch_user(db, req['user_id']), "swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'], "verification_code": req['verification_code']})
     return web.json_response(reqs_list)
 
 @router.post("/users/linking/approve")
