@@ -1168,9 +1168,10 @@ async def reject_linking(request: web.Request) -> web.Response:
     user_id = info['user_id']
     swimmer_id = info['swimmer_id']
     db = request.config_dict["DB"]
-    await db.execute("UPDATE linking_requests SET status = 'rejected' WHERE user_id = $1 AND swimmer_id = $2", user_id,
-                     swimmer_id)
-    return web.json_response({"status": "success", "reason": "rejected request"}, status=200)
+    await db.execute(
+        "UPDATE linking_requests SET status = 'rejected', approved_by = $1 WHERE user_id = $2 AND swimmer_id = $3",
+        int(a.user_id), int(user_id), int(swimmer_id))
+    return web.json_response({"status": "success", "reason": "rejected linking"}, status=200)
 
 
 @router.post("/users")
