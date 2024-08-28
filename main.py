@@ -840,6 +840,10 @@ async def fetch_all_users(db: asyncpg.Connection):
         raise NotFoundException(f"No users found!")
     users = []
     for row in rows:
+        if row['linked_swimmer']:
+            ls = await fetch_swimmer_lite(db, row['linked_swimmer'])
+        else:
+            ls = None
         users.append(
             {
                 "id": row['id'],
@@ -847,7 +851,7 @@ async def fetch_all_users(db: asyncpg.Connection):
                 "name": row["name"],
                 "email": row["email"],
                 "permissions": row["permissions"],
-                "linked_swimmer": row['linked_swimmer'],
+                "linked_swimmer": ls,
                 "active": row["active"],
                 "latest_access": row["latest_access"]
             }
