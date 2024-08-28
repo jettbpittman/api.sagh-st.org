@@ -1127,7 +1127,7 @@ async def linking_requests(request: web.Request) -> web.Response:
     reqs = await db.fetch("SELECT * FROM linking_requests WHERE user_id = $1", int(user_id))
     reqs_list = []
     for req in reqs:
-        reqs_list.append({"swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].isoformat(), "status": req['status']})
+        reqs_list.append({"swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status']})
     return web.json_response(reqs_list)
 
 
