@@ -1110,8 +1110,8 @@ async def req_linking(request: web.Request) -> web.Response:
     user_id = info['user_id']
     db = request.config_dict["DB"]
     try:
-        await db.execute("INSERT INTO linking_requests (user_id, swimmer_id) VALUES ($1, $2)", user_id,
-                         info['swimmer_id'])
+        await db.execute("INSERT INTO linking_requests (user_id, swimmer_id) VALUES ($1, $2)", int(user_id),
+                         int(info['swimmer_id']))
         return web.json_response({"status": "success", "reason": "submitted request"}, status=200)
     except asyncpg.UniqueViolationError:
         return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
