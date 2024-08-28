@@ -860,6 +860,10 @@ async def fetch_user(db: asyncpg.Connection, id: int):
                             "FROM users WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"No user found!")
+    if row['linked_swimmer']:
+        ls = await fetch_swimmer_lite(db, row['linked_swimmer'])
+    else:
+        ls = None
     return {
         "id": row['id'],
         "username": row["username"],
@@ -867,7 +871,7 @@ async def fetch_user(db: asyncpg.Connection, id: int):
         "email": row["email"],
         "permissions": row["permissions"],
         "active": row["active"],
-        "linked_swimmer": await fetch_swimmer_lite(db, row['linked_swimmer']),
+        "linked_swimmer": ls,
         "latest_access": row['latest_access']
     }
 
