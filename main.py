@@ -1137,7 +1137,7 @@ async def linking_requests(request: web.Request) -> web.Response:
     if a.status != 200:
         return a
     db = request.config_dict["DB"]
-    reqs = await db.fetch("SELECT * FROM linking_requests")
+    reqs = await db.fetch("SELECT * FROM linking_requests WHERE status = 'unapproved'")
     reqs_list = []
     for req in reqs:
         reqs_list.append({"user": await fetch_user(db, req['user_id']), "swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status']})
