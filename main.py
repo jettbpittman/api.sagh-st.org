@@ -1153,12 +1153,10 @@ async def approve_linking(request: web.Request) -> web.Response:
     swimmer_id = info['swimmer_id']
     db = request.config_dict["DB"]
     await db.execute("UPDATE users SET linked_swimmer = $1 WHERE id = $2", swimmer_id, user_id)
-    try:
-        await db.execute(
-            "UPDATE linking_requests SET status = 'approved' AND approved_by = $1 WHERE user_id = $2 AND swimmer_id = $3",
-            a.user_id, user_id, swimmer_id)
-    except:
-        pass
+    await db.execute(
+            "UPDATE linking_requests SET status = 'approved' AND approved_by = $1 WHERE user_id = $2 AND swimmer_id = "
+            "$3",
+            int(a.user_id), int(user_id), int(swimmer_id))
     return web.json_response({"status": "success", "reason": "linked swimmer"}, status=200)
 
 
