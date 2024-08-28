@@ -1108,12 +1108,6 @@ async def req_linking(request: web.Request) -> web.Response:
     if a.status != 200:
         return a
     user_id = info['user_id']
-    if a.user_id == user_id:
-        pass
-    elif (await auth_required(request, permissions=4)).status == 200:
-        pass
-    else:
-        return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
     db = request.config_dict["DB"]
     try:
         await db.execute("INSERT INTO linking_requests (user_id, swimmer_id) VALUES ($1, $2)", user_id,
