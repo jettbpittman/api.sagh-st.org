@@ -1140,7 +1140,7 @@ async def linking_requests(request: web.Request) -> web.Response:
     reqs = await db.fetch("SELECT * FROM linking_requests")
     reqs_list = []
     for req in reqs:
-        reqs_list.append({"swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status']})
+        reqs_list.append({"user": await fetch_user(db, req['user_id']), "swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status']})
     return web.json_response(reqs_list)
 
 @router.post("/users/linking/approve")
