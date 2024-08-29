@@ -949,7 +949,7 @@ def strip_token(token: str):
 @handle_json_error
 @router.post("/standards/create")
 async def create_standard(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=1)
+    a = await auth_required(request, permissions=2)
     if a.status != 200:
         return a
     db = request.config_dict["DB"]
@@ -978,7 +978,7 @@ async def create_standard(request: web.Request) -> web.Response:
 @router.post("/attendance/submit")
 @handle_json_error
 async def submit_attendance(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=1)
+    a = await auth_required(request, permissions=2)
     if a.status != 200:
         return a
     db = request.config_dict["DB"]
@@ -998,7 +998,7 @@ async def submit_attendance(request: web.Request) -> web.Response:
 @router.get("/attendance/date/{date}/{type}")
 @handle_json_error
 async def get_attendance_date(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=1)
+    a = await auth_required(request, permissions=2)
     if a.status != 200:
         return a
     db = request.config_dict["DB"]
@@ -1228,7 +1228,7 @@ async def get_all_user(request: web.Request) -> web.Response:
 @router.get("/users/{id}")
 @handle_json_error
 async def get_user(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=0)
+    a = await auth_required(request, permissions=1)
     if a.status != 200:
         return a
     user_id = request.match_info['id']
@@ -1246,7 +1246,7 @@ async def get_user(request: web.Request) -> web.Response:
 @router.patch("/users/{id}")
 @handle_json_error
 async def edit_user(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=0)
+    a = await auth_required(request, permissions=4)
     if a.status != 200:
         return a
     user_id = request.match_info['id']
@@ -1361,7 +1361,7 @@ async def login(request: web.Request) -> web.Response:
 @router.post("/swimmers")
 @handle_json_error
 async def create_swimmer(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=2)
+    a = await auth_required(request, permissions=3)
     if a.status != 200:
         return a
     info = await request.json()
@@ -1415,7 +1415,7 @@ async def create_swimmer(request: web.Request) -> web.Response:
 @router.patch("/swimmers/{id}")
 @handle_json_error
 async def edit_swimmer(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=2)
+    a = await auth_required(request, permissions=3)
     if a.status != 200:
         return a
     swimmer_id = request.match_info['id']
@@ -1544,7 +1544,7 @@ async def get_swimmer_bests(request: web.Request) -> web.Response:
 @router.post("/teams")
 @handle_json_error
 async def create_team(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=2)
+    a = await auth_required(request, permissions=4)
     if a.status != 200:
         return a
     info = await request.json()
@@ -1631,7 +1631,7 @@ async def get_team_roster_all(request: web.Request) -> web.Response:
 @router.post("/meets")
 @handle_json_error
 async def create_meet(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=2)
+    a = await auth_required(request, permissions=3)
     if a.status != 200:
         return a
     info = await request.json()
@@ -1980,7 +1980,7 @@ async def get_meet_entries_by_team(request: web.Request) -> web.Response:
 @router.post("/entries")
 @handle_json_error
 async def create_entry(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=2)
+    a = await auth_required(request, permissions=3)
     if a.status != 200:
         return a
     info = await request.json()
