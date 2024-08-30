@@ -853,7 +853,7 @@ async def fetch_all_users(db: asyncpg.Connection):
                 "permissions": row["permissions"],
                 "linked_swimmer": ls,
                 "active": row["active"],
-                "latest_access": row["latest_access"].strftime('%Y-%m-%d %H:%M:%S')
+                "latest_access": row["latest_access"]
             }
         )
     return users
