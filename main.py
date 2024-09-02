@@ -1228,7 +1228,7 @@ async def get_all_user(request: web.Request) -> web.Response:
 @router.get("/users/{id}")
 @handle_json_error
 async def get_user(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=1)
+    a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
     user_id = request.match_info['id']
