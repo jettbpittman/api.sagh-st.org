@@ -1493,7 +1493,6 @@ async def db_info(request: web.Request) -> web.Response:
 
 
 @router.get("/swimmers/{id}")
-@handle_json_error
 async def get_swimmers(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
