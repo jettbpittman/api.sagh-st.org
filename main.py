@@ -1652,7 +1652,7 @@ async def get_team_roster_all(request: web.Request) -> web.Response:
 @router.get("/teams/{id}/roster/all_pub")
 @handle_json_error
 async def get_team_roster_all_pub(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=1)
+    a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
     team_id = request.match_info["id"]
