@@ -476,7 +476,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
 
 async def fetch_team_roster(db: asyncpg.Connection, id: str):
     rows = await db.fetch(
-        "SELECT * FROM swimmers WHERE team = $1 AND active = true AND manager = false ORDER BY last_name, first_name, middle_name",
+        "SELECT id FROM swimmers WHERE team = $1 AND active = true AND manager = false ORDER BY last_name, first_name, middle_name",
         str(id)
     )
     roster = []
@@ -490,7 +490,7 @@ async def fetch_team_roster(db: asyncpg.Connection, id: str):
 
 async def fetch_team_managers(db: asyncpg.Connection, id: str):
     rows = await db.fetch(
-        "SELECT * FROM swimmers WHERE team = $1 AND active = true AND manager = true", str(id)
+        "SELECT is FROM swimmers WHERE team = $1 AND active = true AND manager = true", str(id)
     )
     roster = []
     for swimmer in rows:
@@ -502,10 +502,19 @@ async def fetch_team_managers(db: asyncpg.Connection, id: str):
 
 
 async def fetch_team_roster_all(db: asyncpg.Connection, id: str):
-    rows = await db.fetch("SELECT * FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name", str(id))
+    rows = await db.fetch("SELECT id FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name", str(id))
     roster = []
     for swimmer in rows:
         s = await fetch_swimmer_lite(db, swimmer["id"])
+        roster.append(s)
+    return sorted(roster, key=lambda d: d["last_name"])
+
+
+async def fetch_team_roster_all_noperms(db: asyncpg.Connection, id: str):
+    rows = await db.fetch("SELECT id, last_name, first_name, middle_name, class FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name", str(id))
+    roster = []
+    for swimmer in rows:
+        s = await fetch_swimmer_noperms(db, swimmer["id"])
         roster.append(s)
     return sorted(roster, key=lambda d: d["last_name"])
 
@@ -692,6 +701,19 @@ async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
         "stats": {
             "entries": entries[0]
         }
+    }
+
+
+async def fetch_swimmer_noperms(db: asyncpg.Connection, id: int):
+    row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", int(id))
+    if not row:
+        raise NotFoundException(f"Swimmer {id} does not exist!")
+    return {
+        "id": row["id"],
+        "first_name": row["first_name"],
+        "middle_name": row["middle_name"],
+        "last_name": row["last_name"],
+        "class": row["class"],
     }
 
 
