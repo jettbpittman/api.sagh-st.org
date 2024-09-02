@@ -490,7 +490,7 @@ async def fetch_team_roster(db: asyncpg.Connection, id: str):
 
 async def fetch_team_managers(db: asyncpg.Connection, id: str):
     rows = await db.fetch(
-        "SELECT is FROM swimmers WHERE team = $1 AND active = true AND manager = true", str(id)
+        "SELECT id FROM swimmers WHERE team = $1 AND active = true AND manager = true", str(id)
     )
     roster = []
     for swimmer in rows:
@@ -1269,7 +1269,7 @@ async def get_user(request: web.Request) -> web.Response:
 @router.patch("/users/{id}")
 @handle_json_error
 async def edit_user(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=4)
+    a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
     user_id = request.match_info['id']
@@ -1640,12 +1640,24 @@ async def get_team_roster_m(request: web.Request) -> web.Response:
 @router.get("/teams/{id}/roster/all")
 @handle_json_error
 async def get_team_roster_all(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=0)
+    a = await auth_required(request, permissions=1)
     if a.status != 200:
         return a
     team_id = request.match_info["id"]
     db = request.config_dict["DB"]
     team = await fetch_team_roster_all(db, team_id)
+    return web.json_response(team)
+
+
+@router.get("/teams/{id}/roster/all_pub")
+@handle_json_error
+async def get_team_roster_all_pub(request: web.Request) -> web.Response:
+    a = await auth_required(request, permissions=1)
+    if a.status != 200:
+        return a
+    team_id = request.match_info["id"]
+    db = request.config_dict["DB"]
+    team = await fetch_team_roster_all_noperms(db, team_id)
     return web.json_response(team)
 
 
