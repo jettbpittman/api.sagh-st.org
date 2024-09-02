@@ -525,7 +525,8 @@ async def fetch_team(db: asyncpg.Connection, id: str):
 
 
 async def fetch_swimmer(db: asyncpg.Connection, id: int):
-    entries = await db.fetchrow("SELECT count(*) FROM entries WHERE swimmer = $1", int(id))
+    entries_i = await db.fetchrow("SELECT count(*) FROM entries WHERE swimmer = $1", int(id))
+    entries_r = await db.fetchrow("SELECT count(*) FROM relays WHERE $1 in (swimmer_1, swimmer_2, swimmer_3, swimmer_4)", int(id))
     meets = await db.fetch("SELECT DISTINCT meet FROM entries WHERE swimmer = $1", int(id))
     row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", int(id))
     if not row:
@@ -545,9 +546,9 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
         "usas_id": row['usas_id'],
         "manager": row['manager'],
         "stats": {
-            "entries": entries[0],
+            "entries": entries_i[0] + entries_r[0],
             "meet_count": len(meets),
-            "meets": json.dumps([list(record) for record in meets])
+            "meets": json.dumps([list(sorted(list(record), key=lambda d: d['startdate'])) for record in meets])
         }
     }
 
