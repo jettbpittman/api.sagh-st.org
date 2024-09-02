@@ -548,7 +548,7 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
         "stats": {
             "entries": entries_i[0] + entries_r[0],
             "meet_count": len(meets),
-            "meets": json.dumps(sorted([list(record) for record in meets], key=lambda d: d[0]['startdate']))
+            "meets": json.dumps(sorted([list(record) for record in meets], key=lambda d: str(d[0]['startdate'])))
         }
     }
 
