@@ -1154,7 +1154,7 @@ async def req_linking(request: web.Request) -> web.Response:
             await db.execute("UPDATE users SET linked_swimmer = $1 WHERE id = $2", int(swimmer['id']), int(user_id))
         except asyncpg.UniqueViolationError:
             return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
-    elif verf_code == team['verification_code '] and dob != swimmer['dob']:
+    elif verf_code == team['verification_code'] and dob != swimmer['dob']:
         try:
             await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
                              "$2, true, false)", int(user_id), int(info['swimmer_id']))
