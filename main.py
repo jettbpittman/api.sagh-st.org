@@ -1140,13 +1140,38 @@ async def req_linking(request: web.Request) -> web.Response:
         return a
     user_id = info['user_id']
     verf_code = info['verification_code']
+    dob = info['dob']
     db = request.config_dict["DB"]
-    try:
-        await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, verification_code) VALUES ($1, $2, $3)", int(user_id),
-                         int(info['swimmer_id']), verf_code)
-        return web.json_response({"status": "success", "reason": "submitted request"}, status=200)
-    except asyncpg.UniqueViolationError:
-        return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
+    team_code = info['team']
+    swimmer = await fetch_swimmer(db, info['swimmer_id'])
+    team = await fetch_team(db, team_code)
+    if verf_code == team['verification_code'] and dob == swimmer['dob']:
+        try:
+            await db.execute(
+                "INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match, status, approved_by) "
+                "VALUES ($1, $2, true, true, 'approved', 'auto (dob/code match)')", int(user_id), int(info['swimmer_id']))
+            await db.execute("UPDATE users SET linked_swimmer = $1 WHERE id = $2", int(swimmer['id']), int(user_id))
+        except asyncpg.UniqueViolationError:
+            return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
+    elif verf_code == team['verification_code '] and dob != swimmer['dob']:
+        try:
+            await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
+                             "$2, true, false)", int(user_id), int(info['swimmer_id']))
+        except asyncpg.UniqueViolationError:
+            return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
+    elif verf_code != team['verification_code'] and dob == swimmer['dob']:
+        try:
+            await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
+                             "$2, false, true)", int(user_id), int(info['swimmer_id']))
+        except asyncpg.UniqueViolationError:
+            return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
+    elif verf_code != team['verification_code'] and dob != swimmer['dob']:
+        try:
+            await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, status, dob_match, code_match, approved_by) "
+                             "VALUES ($1, $2, 'rejected', false, false, 'auto (dob/code mismatch')", int(user_id), int(info['swimmer_id']))
+        except asyncpg.UniqueViolationError:
+            return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
+    return web.json_response({"status": "success", "reason": "submitted request"}, status=200)
 
 
 @router.get("/users/linking/requests")
@@ -1158,12 +1183,12 @@ async def linking_requests(request: web.Request) -> web.Response:
     reqs = await db.fetch("SELECT * FROM linking_requests WHERE user_id = $1", int(a.user_id))
     reqs_list = []
     for req in reqs:
-        reqs_list.append({"swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'], "verification_code": req['verification_code']})
+        reqs_list.append({"swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'], "code_match": req['code_match'], "dob_match": req['dob_match']})
     return web.json_response(reqs_list)
 
 
 @router.get("/users/linking/requestqueue")
-async def linking_requests(request: web.Request) -> web.Response:
+async def linking_requests_queue(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=4)
     if a.status != 200:
         return a
@@ -1171,8 +1196,9 @@ async def linking_requests(request: web.Request) -> web.Response:
     reqs = await db.fetch("SELECT * FROM linking_requests WHERE status = 'unapproved'")
     reqs_list = []
     for req in reqs:
-        reqs_list.append({"user": await fetch_user(db, req['user_id']), "swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'], "verification_code": req['verification_code']})
+        reqs_list.append({"user": await fetch_user(db, req['user_id']), "swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'], "code_match": req['code_match'], "dob_match": req['dob_match']})
     return web.json_response(reqs_list)
+
 
 @router.post("/users/linking/approve")
 async def approve_linking(request: web.Request) -> web.Response:
