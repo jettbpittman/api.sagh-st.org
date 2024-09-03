@@ -904,7 +904,7 @@ async def fetch_user(db: asyncpg.Connection, id: int):
         "permissions": row["permissions"],
         "active": row["active"],
         "linked_swimmer": ls,
-        "latest_access": row['latest_access']
+        "latest_access": row['latest_access'].strftime('%Y-%m-%d %H:%M:%S')
     }
 
 
