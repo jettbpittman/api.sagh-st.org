@@ -1149,11 +1149,13 @@ async def req_linking(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     team_code = info['team']
     swimmer = await fetch_swimmer(db, info['swimmer_id'])
+    if swimmer['dob'] is None:
+        return web.json_response({"status": "failed", "reason": "swimmer is not capable of being linked"}, status=406)
     team = await fetch_team(db, team_code)
     prev_reqs = await db.fetch("SELECT count(*) FROM linking_requests WHERE user_id = $1 AND status = 'unapproved'",
                                int(user_id))
     if int(prev_reqs[0]['count']) > 0:
-        return web.json_response({"status": "failed", "reason": "this user has already requested linking"}, status=409)
+        return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
     if verf_code == team['verification_code'] and dob == swimmer['dob']:
         await db.execute(
             "INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match, status, approved_by) "
