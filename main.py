@@ -1146,7 +1146,7 @@ async def req_linking(request: web.Request) -> web.Response:
     team_code = info['team']
     swimmer = await fetch_swimmer(db, info['swimmer_id'])
     team = await fetch_team(db, team_code)
-    prev_reqs = await db.fetch("SELECT count(*) FROM linking_requests WHERE user_id = $1 AND status = 'unapproved'")
+    prev_reqs = await db.fetch("SELECT count(*) FROM linking_requests WHERE user_id = $1 AND status = 'unapproved'", int(user_id))
     if prev_reqs[0] > 0:
         return web.json_response({"status": "failed", "reason": "thus user has already requested linking"}, status=409)
     if verf_code == team['verification_code'] and dob == swimmer['dob']:
