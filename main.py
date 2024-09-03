@@ -881,7 +881,7 @@ async def fetch_all_users(db: asyncpg.Connection):
                 "permissions": row["permissions"],
                 "linked_swimmer": ls,
                 "active": row["active"],
-                "latest_access": row["latest_access"]
+                "latest_access": row["latest_access"].strftime('%Y-%m-%d %H:%M:%S')
             }
         )
     return users
@@ -1068,7 +1068,7 @@ async def auth_check(request: web.Request) -> web.Response:
         int(token["user_id"]),
     )
     ts = datetime.datetime.now().isoformat()
-    await db.execute("UPDATE users SET latest_access = $1 WHERE id = $2", str(ts), int(token["user_id"]))
+    await db.execute("UPDATE users SET latest_access = default WHERE id = $1", int(token["user_id"]))
     if r['active'] is False:
         return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
     return web.json_response(
