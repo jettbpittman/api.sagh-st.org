@@ -530,6 +530,7 @@ async def fetch_team(db: asyncpg.Connection, id: str):
         "email": row["email"],
         "phone": row["phone"],
         "code": row["code"],
+        "verification_code": row['verification_code']
     }
 
 
