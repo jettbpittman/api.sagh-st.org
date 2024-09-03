@@ -502,7 +502,8 @@ async def fetch_team_managers(db: asyncpg.Connection, id: str):
 
 
 async def fetch_team_roster_all(db: asyncpg.Connection, id: str):
-    rows = await db.fetch("SELECT id FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name", str(id))
+    rows = await db.fetch("SELECT id FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name",
+                          str(id))
     roster = []
     for swimmer in rows:
         s = await fetch_swimmer_lite(db, swimmer["id"])
@@ -511,7 +512,9 @@ async def fetch_team_roster_all(db: asyncpg.Connection, id: str):
 
 
 async def fetch_team_roster_all_noperms(db: asyncpg.Connection, id: str):
-    rows = await db.fetch("SELECT id, last_name, first_name, middle_name, class FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name", str(id))
+    rows = await db.fetch(
+        "SELECT id, last_name, first_name, middle_name, class FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name",
+        str(id))
     roster = []
     for swimmer in rows:
         s = await fetch_swimmer_noperms(db, swimmer["id"])
@@ -536,7 +539,8 @@ async def fetch_team(db: asyncpg.Connection, id: str):
 
 async def fetch_swimmer(db: asyncpg.Connection, id: int):
     entries_i = await db.fetchrow("SELECT count(*) FROM entries WHERE swimmer = $1", int(id))
-    entries_r = await db.fetchrow("SELECT count(*) FROM relays WHERE $1 in (swimmer_1, swimmer_2, swimmer_3, swimmer_4)", int(id))
+    entries_r = await db.fetchrow(
+        "SELECT count(*) FROM relays WHERE $1 in (swimmer_1, swimmer_2, swimmer_3, swimmer_4)", int(id))
     meets = await db.fetch("SELECT DISTINCT meet FROM entries WHERE swimmer = $1", int(id))
     row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", int(id))
     if not row:
@@ -1146,32 +1150,26 @@ async def req_linking(request: web.Request) -> web.Response:
     team_code = info['team']
     swimmer = await fetch_swimmer(db, info['swimmer_id'])
     team = await fetch_team(db, team_code)
-    prev_reqs = await db.fetch("SELECT count(*) FROM linking_requests WHERE user_id = $1 AND status = 'unapproved'", int(user_id))
+    prev_reqs = await db.fetch("SELECT count(*) FROM linking_requests WHERE user_id = $1 AND status = 'unapproved'",
+                               int(user_id))
     if int(prev_reqs[0]['count']) > 0:
-        return web.json_response({"status": "failed", "reason": "thus user has already requested linking"}, status=409)
+        return web.json_response({"status": "failed", "reason": "this user has already requested linking"}, status=409)
     if verf_code == team['verification_code'] and dob == swimmer['dob']:
         await db.execute(
             "INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match, status, approved_by) "
             "VALUES ($1, $2, true, true, 'approved', 'auto (dob/code match)')", int(user_id), int(info['swimmer_id']))
         await db.execute("UPDATE users SET linked_swimmer = $1 WHERE id = $2", int(swimmer['id']), int(user_id))
     elif verf_code == team['verification_code'] and dob != swimmer['dob']:
-        try:
-            await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
-                             "$2, true, false)", int(user_id), int(info['swimmer_id']))
-        except asyncpg.UniqueViolationError:
-            return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
+        await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
+                         "$2, true, false)", int(user_id), int(info['swimmer_id']))
     elif verf_code != team['verification_code'] and dob == swimmer['dob']:
-        try:
-            await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
-                             "$2, false, true)", int(user_id), int(info['swimmer_id']))
-        except asyncpg.UniqueViolationError:
-            return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
+        await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
+                         "$2, false, true)", int(user_id), int(info['swimmer_id']))
     elif verf_code != team['verification_code'] and dob != swimmer['dob']:
-        try:
-            await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, status, dob_match, code_match, approved_by) "
-                             "VALUES ($1, $2, 'rejected', false, false, 'auto (dob/code mismatch')", int(user_id), int(info['swimmer_id']))
-        except asyncpg.UniqueViolationError:
-            return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
+        await db.execute(
+            "INSERT INTO linking_requests (user_id, swimmer_id, status, dob_match, code_match, approved_by) "
+            "VALUES ($1, $2, 'rejected', false, false, 'auto (dob/code mismatch')", int(user_id),
+            int(info['swimmer_id']))
     return web.json_response({"status": "success", "reason": "submitted request"}, status=200)
 
 
@@ -1184,7 +1182,9 @@ async def linking_requests(request: web.Request) -> web.Response:
     reqs = await db.fetch("SELECT * FROM linking_requests WHERE user_id = $1", int(a.user_id))
     reqs_list = []
     for req in reqs:
-        reqs_list.append({"swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'], "code_match": req['code_match'], "dob_match": req['dob_match']})
+        reqs_list.append({"swimmer": await fetch_swimmer_lite(db, req['swimmer_id']),
+                          "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'],
+                          "code_match": req['code_match'], "dob_match": req['dob_match']})
     return web.json_response(reqs_list)
 
 
@@ -1197,7 +1197,10 @@ async def linking_requests_queue(request: web.Request) -> web.Response:
     reqs = await db.fetch("SELECT * FROM linking_requests WHERE status = 'unapproved'")
     reqs_list = []
     for req in reqs:
-        reqs_list.append({"user": await fetch_user(db, req['user_id']), "swimmer": await fetch_swimmer_lite(db, req['swimmer_id']), "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'], "code_match": req['code_match'], "dob_match": req['dob_match']})
+        reqs_list.append(
+            {"user": await fetch_user(db, req['user_id']), "swimmer": await fetch_swimmer_lite(db, req['swimmer_id']),
+             "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'],
+             "code_match": req['code_match'], "dob_match": req['dob_match']})
     return web.json_response(reqs_list)
 
 
@@ -1212,8 +1215,8 @@ async def approve_linking(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     await db.execute("UPDATE users SET linked_swimmer = $1 WHERE id = $2", swimmer_id, user_id)
     await db.execute(
-            "UPDATE linking_requests SET status = 'approved', approved_by = $1 WHERE user_id = $2 AND swimmer_id = $3",
-            str(a.user_id), int(user_id), int(swimmer_id))
+        "UPDATE linking_requests SET status = 'approved', approved_by = $1 WHERE user_id = $2 AND swimmer_id = $3",
+        str(a.user_id), int(user_id), int(swimmer_id))
     return web.json_response({"status": "success", "reason": "linked swimmer"}, status=200)
 
 
