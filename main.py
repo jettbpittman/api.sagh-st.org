@@ -1146,14 +1146,14 @@ async def req_linking(request: web.Request) -> web.Response:
     team_code = info['team']
     swimmer = await fetch_swimmer(db, info['swimmer_id'])
     team = await fetch_team(db, team_code)
+    prev_reqs = await db.fetch("SELECT count(*) FROM linking_requests WHERE user_id = $1 AND status = 'unapproved'")
+    if prev_reqs[0] > 0:
+        return web.json_response({"status": "failed", "reason": "thus user has already requested linking"}, status=409)
     if verf_code == team['verification_code'] and dob == swimmer['dob']:
-        try:
-            await db.execute(
-                "INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match, status, approved_by) "
-                "VALUES ($1, $2, true, true, 'approved', 'auto (dob/code match)')", int(user_id), int(info['swimmer_id']))
-            await db.execute("UPDATE users SET linked_swimmer = $1 WHERE id = $2", int(swimmer['id']), int(user_id))
-        except asyncpg.UniqueViolationError:
-            return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
+        await db.execute(
+            "INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match, status, approved_by) "
+            "VALUES ($1, $2, true, true, 'approved', 'auto (dob/code match)')", int(user_id), int(info['swimmer_id']))
+        await db.execute("UPDATE users SET linked_swimmer = $1 WHERE id = $2", int(swimmer['id']), int(user_id))
     elif verf_code == team['verification_code'] and dob != swimmer['dob']:
         try:
             await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
@@ -1213,7 +1213,7 @@ async def approve_linking(request: web.Request) -> web.Response:
     await db.execute("UPDATE users SET linked_swimmer = $1 WHERE id = $2", swimmer_id, user_id)
     await db.execute(
             "UPDATE linking_requests SET status = 'approved', approved_by = $1 WHERE user_id = $2 AND swimmer_id = $3",
-            int(a.user_id), int(user_id), int(swimmer_id))
+            str(a.user_id), int(user_id), int(swimmer_id))
     return web.json_response({"status": "success", "reason": "linked swimmer"}, status=200)
 
 
@@ -1228,7 +1228,7 @@ async def reject_linking(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     await db.execute(
         "UPDATE linking_requests SET status = 'rejected', approved_by = $1 WHERE user_id = $2 AND swimmer_id = $3",
-        int(a.user_id), int(user_id), int(swimmer_id))
+        str(a.user_id), int(user_id), int(swimmer_id))
     return web.json_response({"status": "success", "reason": "rejected linking"}, status=200)
 
 
