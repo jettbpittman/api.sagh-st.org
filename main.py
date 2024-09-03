@@ -1138,6 +1138,7 @@ async def register_user(request: web.Request) -> web.Response:
 
 
 @router.post("/users/linking/request")
+@handle_json_error
 async def req_linking(request: web.Request) -> web.Response:
     info = await request.json()
     a = await auth_required(request, permissions=0)
