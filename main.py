@@ -1479,27 +1479,27 @@ async def edit_swimmer(request: web.Request) -> web.Response:
     swimmer = await request.json()
     fields = {}
     if "first_name" in swimmer:
-        fields["first_name"] = swimmer['first_name']
+        fields["first_name"] = f"'{swimmer['first_name']}'"
     if "middle_name" in swimmer:
-        fields["middle_name"] = swimmer['middle_name']
+        fields["middle_name"] = f"'{swimmer['middle_name']}'"
     if "last_name" in swimmer:
-        fields["last_name"] = swimmer['last_name']
+        fields["last_name"] = f"'{swimmer['last_name']}'"
     if "class" in swimmer:
         fields["class"] = swimmer['class']
     if "active" in swimmer:
         fields["active"] = swimmer['active']
     if "usas_id" in swimmer:
-        fields["usas_id"] = swimmer['usas_id']
+        fields["usas_id"] = f"'{swimmer['usas_id']}'"
     if "manager" in swimmer:
         fields['manager'] = swimmer['manager']
     if "homeschool" in swimmer:
         fields['homeschool'] = swimmer['homeschool']
     if "dob" in swimmer:
-        fields['dob'] = swimmer['dob']
+        fields['dob'] = f"'{swimmer['dob']}'"
     if fields:
         field_values = ""
         for field in fields:
-            field_values += f"{field} = '{fields[field]}', "
+            field_values += f"{field} = {fields[field]}, "
         db = request.config_dict['DB']
         await db.execute(
             f"UPDATE swimmers SET {field_values[:-2]} WHERE id = $1", int(swimmer_id)
