@@ -1569,7 +1569,6 @@ async def get_swimmers(request: web.Request) -> web.Response:
 
 
 @router.get("/swimmers/{id}/entries")
-@handle_json_error
 async def get_swimmer_all_entries(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
