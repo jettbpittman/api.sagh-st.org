@@ -1499,7 +1499,7 @@ async def edit_swimmer(request: web.Request) -> web.Response:
     if fields:
         field_values = ""
         for field in fields:
-            field_values += f"{field} = {fields[field]}, "
+            field_values += f"{field} = '{fields[field]}', "
         db = request.config_dict['DB']
         await db.execute(
             f"UPDATE swimmers SET {field_values[:-2]} WHERE id = $1", int(swimmer_id)
