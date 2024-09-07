@@ -1491,6 +1491,12 @@ async def edit_swimmer(request: web.Request) -> web.Response:
         fields["active"] = swimmer['active']
     if "usas_id" in swimmer:
         fields["usas_id"] = swimmer['usas_id']
+    if "manager" in swimmer:
+        fields['manager'] = swimmer['manager']
+    if "homeschool" in swimmer:
+        fields['homeschool'] = swimmer['homeschool']
+    if "dob" in swimmer:
+        fields['dob'] = swimmer['dob']
     if fields:
         field_values = ""
         for field in fields:
@@ -1512,7 +1518,10 @@ async def edit_swimmer(request: web.Request) -> web.Response:
             "class": swimmer['class'],
             "team": await fetch_team(db, swimmer['team']),
             "active": swimmer['active'],
-            "usas_id": swimmer['usas_id']
+            "usas_id": swimmer['usas_id'],
+            "dob": swimmer['dob'],
+            "manager": swimmer['manager'],
+            "homeschool": swimmer['homeschool']
         }
     )
 
