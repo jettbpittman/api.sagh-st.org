@@ -1471,7 +1471,6 @@ async def create_swimmer(request: web.Request) -> web.Response:
 
 
 @router.patch("/swimmers/{id}")
-@handle_json_error
 async def edit_swimmer(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=3)
     if a.status != 200:
