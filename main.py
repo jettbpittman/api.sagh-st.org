@@ -1052,7 +1052,7 @@ async def get_attendance_swimmer(request: web.Request) -> web.Response:
     rows = await db.fetch("SELECT * FROM attendance WHERE swimmer = $1 ORDER BY date DESC", int(swimmer))
     resp = {'swimmer': await fetch_swimmer(db, swimmer), 'records': {}}
     for date in rows:
-        resp['records'][date['date']] = [date['status'], date['type']]
+        resp['records'][f"{date['date']}-{date['type']}"] = [date['date'], date['status'], date['type']]
     return web.json_response(resp)
 
 
