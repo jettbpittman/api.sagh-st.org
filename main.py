@@ -1049,11 +1049,10 @@ async def get_attendance_swimmer(request: web.Request) -> web.Response:
         return a
     db = request.config_dict["DB"]
     swimmer = request.match_info['swimmer']
-    rows = await db.fetch("SELECT * FROM attendance WHERE swimmer = $1", int(swimmer))
+    rows = await db.fetch("SELECT * FROM attendance WHERE swimmer = $1 ORDER BY date DESC", int(swimmer))
     resp = {'swimmer': await fetch_swimmer(db, swimmer), 'records': {}}
     for date in rows:
         resp['records'][date['date']] = [date['status'], date['type']]
-    resp['records'] = dict(sorted(resp['records'].items(), reverse=True))
     return web.json_response(resp)
 
 
