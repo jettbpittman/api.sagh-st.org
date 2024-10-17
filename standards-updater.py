@@ -37,7 +37,7 @@ cuts = {}
 
 for standard in standards:
     cur.execute(f"SELECT * FROM standards WHERE"
-                f" authority = '{standard[0]}' AND short_name = '{standard[1]}' AND year >= {int(SEASON)}")
+                f" authority = '{standard[0]}' AND short_name = '{standard[1]}' AND year >= {int(date.year)}")
     stan = cur.fetchall()
     for st in stan:
         try:
@@ -65,8 +65,6 @@ def format_time(e):
     else:
         return e
 
-
-stan_len = len(cuts["F50F"])
 
 ent = cur.execute(f"SELECT * FROM entries WHERE standards is null and meet in (select id from meets where season = {SEASON})")
 entries = cur.fetchall()

@@ -417,7 +417,7 @@ if "--import" in sys.argv:
             l_name = name[0].strip()
             f_name = name[1].strip()
             c = cur.execute(
-                f"SELECT id FROM swimmers WHERE last_name = '{l_name}' AND first_name = '{f_name}'"
+                f"SELECT id FROM swimmers WHERE last_name = '{l_name}' AND first_name = '{f_name}' LIMIT 1"
             )
             r = cur.fetchone()
             try:
