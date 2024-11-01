@@ -1981,6 +1981,8 @@ async def get_season_schedule(request: web.Request) -> web.Response:
             files += f'<b style="text-decoration: underline"><a href="{meet["infopath"]}">INFO</a></b><br>'
         if meet['heatspath']:
             files += f'<b style="text-decoration: underline"><a href="{meet["heatspath"]}">HEATS</a></b><br>'
+        if meet['psychpath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["psychpath"]}">PSYCH</a></b><br>'
         if meet['sessionpath']:
             files += f'<b style="text-decoration: underline"><a href="{meet["sessionpath"]}">SESSIONS</a></b><br>'
         if meet['resultspath']:
@@ -2031,6 +2033,8 @@ async def get_meets_within_two_weeks(request: web.Request) -> web.Response:
             files += f'<b style="text-decoration: underline"><a href="{meet["infopath"]}">INFO</a></b><br>'
         if meet['heatspath']:
             files += f'<b style="text-decoration: underline"><a href="{meet["heatspath"]}">HEATS</a></b><br>'
+        if meet['psychpath']:
+            files += f'<b style="text-decoration: underline"><a href="{meet["psychpath"]}">PSYCH</a></b><br>'
         if meet['sessionpath']:
             files += f'<b style="text-decoration: underline"><a href="{meet["sessionpath"]}">SESSIONS</a></b><br>'
         if meet['resultspath']:
