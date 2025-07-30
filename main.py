@@ -266,7 +266,7 @@ async def fetch_entry(db: asyncpg.Connection, id: int):
     if not row:
         raise NotFoundException(f"Entry {id} does not exist!")
     resp = {
-        "id": row["id"],
+        "id": str(row["id"]),
         "swimmer": await fetch_swimmer(db, row["swimmer"]),
         "meet": await fetch_meet(db, row["meet"]),
         "event": await fetch_event(db, row["event"]),
@@ -297,7 +297,7 @@ async def fetch_entry_lite(db: asyncpg.Connection, id: int):
     if not row:
         raise NotFoundException(f"Entry {id} does not exist!")
     resp = {
-        "id": row["id"],
+        "id": str(row["id"]),
         "meet": await fetch_meet(db, row["meet"]),
         "event": await fetch_event(db, row["event"]),
         "seed": row["seed"],
@@ -343,7 +343,7 @@ async def fetch_event_all_entries(db: asyncpg.Connection, id: str):
     entries = []
     for entry in rows:
         e = {
-            "id": entry["id"],
+            "id": str(entry["id"]),
             "swimmer": await fetch_swimmer(db, entry["swimmer"]),
             "meet": await fetch_meet(db, entry["meet"]),
             "event": await fetch_event(db, entry["event"]),
@@ -406,7 +406,7 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
             name = f"{s['first_name']} {s['last_name']}".strip()
         m = await fetch_meet(db, entry["meet"])
         e = {
-            "id": entry["id"],
+            "id": str(entry["id"]),
             "swimmer": name,
             "swimmer_id": s["id"],
             "homeschool": s["homeschool"],
@@ -471,7 +471,7 @@ async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
             s = await fetch_swimmer(db, entry["swimmer"])
             name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}"
             e = {
-                "swim_id": s["id"],
+                "swim_id": str(s["id"]),
                 "swimmer": name,
                 "homeschool": s["homeschool"],
                 "meet": m["designator"],
@@ -642,7 +642,7 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
     if not row:
         raise NotFoundException(f"Swimmer {id} does not exist!")
     return {
-        "id": row["id"],
+        "id": str(row["id"]),
         "first_name": row["first_name"],
         "middle_name": row["middle_name"],
         "last_name": row["last_name"],
@@ -793,7 +793,7 @@ async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
     if not row:
         raise NotFoundException(f"Swimmer {id} does not exist!")
     return {
-        "id": row["id"],
+        "id": str(row["id"]),
         "first_name": row["first_name"],
         "middle_name": row["middle_name"],
         "last_name": row["last_name"],
@@ -814,7 +814,7 @@ async def fetch_swimmer_noperms(db: asyncpg.Connection, id: int):
     if not row:
         raise NotFoundException(f"Swimmer {id} does not exist!")
     return {
-        "id": row["id"],
+        "id": str(row["id"]),
         "first_name": row["first_name"],
         "middle_name": row["middle_name"],
         "last_name": row["last_name"],
@@ -981,7 +981,7 @@ async def fetch_all_users(db: asyncpg.Connection):
             ls = None
         users.append(
             {
-                "id": row["id"],
+                "id": str(row["id"]),
                 "username": row["username"],
                 "name": row["name"],
                 "email": row["email"],
@@ -1007,7 +1007,7 @@ async def fetch_user(db: asyncpg.Connection, id: int):
     else:
         ls = None
     return {
-        "id": row["id"],
+        "id": str(row["id"]),
         "username": row["username"],
         "name": row["name"],
         "email": row["email"],
@@ -1064,7 +1064,7 @@ async def auth_required(request: web.Request, permissions: int = 0):
             "SELECT permissions FROM users WHERE id = $1", int(r["user_id"])
         )
         if permissions <= r2["permissions"]:
-            resp = web.json_response({"status": "ok", "id": r["user_id"]})
+            resp = web.json_response({"status": "ok", "id": str(r["user_id"])})
             resp.user_id = r["user_id"]
             return resp
         else:
@@ -1209,12 +1209,12 @@ async def auth_check(request: web.Request) -> web.Response:
         {
             "status": "ok",
             "user": {
-                "id": token["user_id"],
+                "id": str(token["user_id"]),
                 "name": r["name"],
                 "username": r["username"],
                 "email": r["email"],
                 "permissions": r["permissions"],
-                "linked_swimmer": r["linked_swimmer"],
+                "linked_swimmer": str(r["linked_swimmer"]),
             },
         }
     )
@@ -1267,7 +1267,7 @@ async def register_user(request: web.Request) -> web.Response:
     # welcome_email(email, name)
     return web.json_response(
         {
-            "id": id,
+            "id": str(id),
             "name": name,
             "username": username,
             "email": email,
@@ -1393,8 +1393,8 @@ async def approve_linking(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=4)
     if a.status != 200:
         return a
-    user_id = info["user_id"]
-    swimmer_id = info["swimmer_id"]
+    user_id = int(info["user_id"])
+    swimmer_id = int(info["swimmer_id"])
     db = request.config_dict["DB"]
     await db.execute(
         "UPDATE users SET linked_swimmer = $1 WHERE id = $2", swimmer_id, user_id
@@ -1416,8 +1416,8 @@ async def reject_linking(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=4)
     if a.status != 200:
         return a
-    user_id = info["user_id"]
-    swimmer_id = info["swimmer_id"]
+    user_id = int(info["user_id"])
+    swimmer_id = int(info["swimmer_id"])
     db = request.config_dict["DB"]
     await db.execute(
         "UPDATE linking_requests SET status = 'rejected', approved_by = $1 WHERE user_id = $2 AND swimmer_id = $3",
@@ -1458,7 +1458,7 @@ async def create_user(request: web.Request) -> web.Response:
     )
     return web.json_response(
         {
-            "id": id,
+            "id": str(id),
             "name": name,
             "username": username,
             "email": email,
@@ -1484,7 +1484,7 @@ async def get_user(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    user_id = request.match_info["id"]
+    user_id = int(request.match_info["id"])
     if user_id == "me" or user_id == a.user_id:
         user_id = a.user_id
     elif (await auth_required(request, permissions=4)).status == 200:
@@ -1504,7 +1504,7 @@ async def edit_user(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    user_id = request.match_info["id"]
+    user_id = int(request.match_info["id"])
     fields = {}
     user = await request.json()
     if a.user_id == user_id:
@@ -1535,13 +1535,13 @@ async def edit_user(request: web.Request) -> web.Response:
     user = await db.fetchrow("SELECT * FROM users WHERE id = $1", int(user_id))
     return web.json_response(
         {
-            "id": user["id"],
+            "id": str(user["id"]),
             "name": user["name"],
             "username": user["username"],
             "email": user["email"],
             "permissions": user["permissions"],
             "active": user["active"],
-            "linked_swimmer": user["linked_swimmer"],
+            "linked_swimmer": str(user["linked_swimmer"]),
         }
     )
 
@@ -1552,7 +1552,7 @@ async def change_password(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    req_id = request.match_info["id"]
+    req_id = int(request.match_info["id"])
     if int(a.user_id) != int(req_id):
         return web.json_response(
             {
@@ -1609,7 +1609,7 @@ async def login(request: web.Request) -> web.Response:
             str(token),
             str(ts),
         )
-        return web.json_response({"user_id": r["id"], "token": token})
+        return web.json_response({"user_id": str(r["id"]), "token": token})
 
 
 # Swimmer Queries
@@ -1651,7 +1651,7 @@ async def create_swimmer(request: web.Request) -> web.Response:
     )
     return web.json_response(
         {
-            "id": id,
+            "id": str(id),
             "first_name": first_name,
             "middle_name": middle_name,
             "last_name": last_name,
@@ -1668,7 +1668,7 @@ async def edit_swimmer(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=3)
     if a.status != 200:
         return a
-    swimmer_id = request.match_info["id"]
+    swimmer_id = int(request.match_info["id"])
     swimmer = await request.json()
     fields = {}
     if "first_name" in swimmer:
@@ -1700,7 +1700,7 @@ async def edit_swimmer(request: web.Request) -> web.Response:
     swimmer = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", int(swimmer_id))
     return web.json_response(
         {
-            "id": swimmer["id"],
+            "id": str(swimmer["id"]),
             "first_name": swimmer["first_name"],
             "middle_name": swimmer["middle_name"],
             "last_name": swimmer["last_name"],
@@ -1753,7 +1753,7 @@ async def get_swimmers(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    swimmer_id = request.match_info["id"]
+    swimmer_id = int(request.match_info["id"])
     db = request.config_dict["DB"]
     swimmer = await fetch_swimmer(db, swimmer_id)
     return web.json_response(swimmer)
@@ -1764,7 +1764,7 @@ async def get_swimmer_all_entries(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    swimmer_id = request.match_info["id"]
+    swimmer_id = int(request.match_info["id"])
     db = request.config_dict["DB"]
     entries = await fetch_swimmer_entries(db, swimmer_id)
     return web.json_response(entries)
@@ -1776,7 +1776,7 @@ async def get_swimmer_all_entries_event(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    swimmer_id = request.match_info["id"]
+    swimmer_id = int(request.match_info["id"])
     event_code = request.match_info["event"]
     db = request.config_dict["DB"]
     entries = await fetch_swimmer_entries_event(db, swimmer_id, event_code)
@@ -1789,7 +1789,7 @@ async def get_swimmer_bests(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    swimmer_id = request.match_info["id"]
+    swimmer_id = int(request.match_info["id"])
     db = request.config_dict["DB"]
     entries = await fetch_swimmer_best_times(db, swimmer_id)
     return web.json_response(entries)
@@ -1823,7 +1823,7 @@ async def create_team(request: web.Request) -> web.Response:
     )
     return web.json_response(
         {
-            "id": id,
+            "id": str(id),
             "name": name,
             "address": address,
             "head_coach": head_coach,
@@ -1929,7 +1929,7 @@ async def create_meet(request: web.Request) -> web.Response:
     )
     return web.json_response(
         {
-            "id": id,
+            "id": str(id),
             "name": name,
             "venue": venue,
             "designator": designator,
@@ -1949,7 +1949,7 @@ async def update_meet_dtinfo(request: web.Request) -> web.Response:
         return a
     info = await request.json()
     fields = {}
-    meet_id = request.match_info["id"]
+    meet_id = int(request.match_info["id"])
     if "pwarmups" in info:
         fields["pwarmups"] = f"'{info['pwarmups']}'"
     if "fwarmups" in info:
@@ -1974,7 +1974,7 @@ async def update_meet_dtinfo(request: web.Request) -> web.Response:
     meet = await db.fetchrow("SELECT * FROM meets WHERE id = $1", int(meet_id))
     return web.json_response(
         {
-            "id": meet_id,
+            "id": str(meet_id),
             "name": meet["name"],
             "venue": meet["venue"],
             "designator": meet["designator"],
@@ -2006,7 +2006,7 @@ async def update_meet_geninfo(request: web.Request) -> web.Response:
         return a
     info = await request.json()
     fields = {}
-    meet_id = request.match_info["id"]
+    meet_id = int(request.match_info["id"])
     if "name" in info:
         fields["name"] = f"'{info['name']}'"
     if "venue" in info:
@@ -2035,7 +2035,7 @@ async def update_meet_geninfo(request: web.Request) -> web.Response:
     meet = await db.fetchrow("SELECT * FROM meets WHERE id = $1", int(meet_id))
     return web.json_response(
         {
-            "id": meet_id,
+            "id": str(meet_id),
             "name": meet["name"],
             "venue": meet["venue"],
             "designator": meet["designator"],
@@ -2067,7 +2067,7 @@ async def update_meet_filesinfo(request: web.Request) -> web.Response:
         return a
     info = await request.json()
     fields = {}
-    meet_id = request.match_info["id"]
+    meet_id = int(request.match_info["id"])
     if "infopath" in info:
         fields["infopath"] = f"'{info['infopath']}'"
     if "heatspath" in info:
@@ -2092,7 +2092,7 @@ async def update_meet_filesinfo(request: web.Request) -> web.Response:
     meet = await db.fetchrow("SELECT * FROM meets WHERE id = $1", int(meet_id))
     return web.json_response(
         {
-            "id": meet_id,
+            "id": str(meet_id),
             "name": meet["name"],
             "venue": meet["venue"],
             "designator": meet["designator"],
@@ -2119,7 +2119,7 @@ async def update_meet_filesinfo(request: web.Request) -> web.Response:
 
 @router.get("/meets/{id}")
 async def get_meet(request: web.Request) -> web.Response:
-    meet_id = request.match_info["id"]
+    meet_id = int(request.match_info["id"])
     db = request.config_dict["DB"]
     meet = await fetch_meet(db, meet_id)
     return web.json_response(meet)
@@ -2128,7 +2128,7 @@ async def get_meet(request: web.Request) -> web.Response:
 @router.get("/meets/{id}/entries")
 @handle_json_error
 async def get_meet_entries(request: web.Request) -> web.Response:
-    meet_id = request.match_info["id"]
+    meet_id = int(request.match_info["id"])
     db = request.config_dict["DB"]
     meet = await fetch_entries_by_meet(db, meet_id)
     return web.json_response(meet)
@@ -2243,7 +2243,7 @@ async def get_meets_within_two_weeks(request: web.Request) -> web.Response:
 @router.get("/meets/{meet}/entries/{team}")
 @handle_json_error
 async def get_meet_entries_by_team(request: web.Request) -> web.Response:
-    meet_id = request.match_info["meet"]
+    meet_id = int(request.match_info["meet"])
     team_id = request.match_info["team"]
     db = request.config_dict["DB"]
     meet = await fetch_entries_by_team(db, meet=meet_id, team=team_id)
@@ -2279,7 +2279,7 @@ async def create_entry(request: web.Request) -> web.Response:
     )
     return web.json_response(
         {
-            "id": id,
+            "id": str(id),
             "swimmer": await fetch_swimmer(db, swimmer),
             "meet": await fetch_meet(db, meet),
             "event": await fetch_event(db, event),
@@ -2293,7 +2293,7 @@ async def create_entry(request: web.Request) -> web.Response:
 @router.get("/entries/{id}")
 @handle_json_error
 async def get_entry(request: web.Request) -> web.Response:
-    entry_id = request.match_info["id"]
+    entry_id = int(request.match_info["id"])
     db = request.config_dict["DB"]
     entry = await fetch_entry(db, entry_id)
     return web.json_response(entry)
