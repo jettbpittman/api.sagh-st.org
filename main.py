@@ -824,7 +824,7 @@ async def fetch_swimmer_noperms(db: asyncpg.Connection, id: int):
 
 async def fetch_meet(db: asyncpg.Connection, id: int):
     row = await db.fetchrow(
-        "SELECT * FROM meets WHERE id = $1 ORDER BY startdate", int(id)
+        "SELECT * FROM meets WHERE id = $1 ORDER BY startdate", id
     )
     if not row:
         raise NotFoundException(f"Meet {id} does not exist!")
