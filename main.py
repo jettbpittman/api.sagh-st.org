@@ -2118,7 +2118,6 @@ async def update_meet_filesinfo(request: web.Request) -> web.Response:
 
 
 @router.get("/meets/{id}")
-@handle_json_error
 async def get_meet(request: web.Request) -> web.Response:
     meet_id = request.match_info["id"]
     db = request.config_dict["DB"]
