@@ -29,7 +29,7 @@ venues = {
     "CC": "Corpus Cristi ISD Natatorium",
     "CO": "Coronado Pool",
     "NE": "Josh Davis Natatorium/Bill Walker Pool",
-    "ND": "Josh Davvis Natatorium",
+    "ND": "Josh Davis Natatorium",
     "NW": "Bill Walker Pool",
     "NS": "NISD Natatorium & Swim Center",
     "SA": "San Antonio Natatorium",
