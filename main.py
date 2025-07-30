@@ -823,11 +823,13 @@ async def fetch_swimmer_noperms(db: asyncpg.Connection, id: int):
 
 
 async def fetch_meet(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT * FROM meets WHERE id = $1 ORDER BY startdate", int(id))
+    row = await db.fetchrow(
+        "SELECT * FROM meets WHERE id = $1 ORDER BY startdate", int(id)
+    )
     if not row:
         raise NotFoundException(f"Meet {id} does not exist!")
     return {
-        "id": row["id"],
+        "id": str(row["id"]),
         "officialname": f"{row['startdate'][:4]} {row['host']} {row['name']}",
         "name": row["name"],
         "venue": row["venue"],
@@ -863,7 +865,7 @@ async def fetch_all_meets(db: asyncpg.Connection):
         meets.append(
             {
                 "season": row["season"],
-                "id": row["id"],
+                "id": str(row["id"]),
                 "officialname": f"{row['startdate'][:4]} {row['host']} {row['name']}",
                 "name": row["name"],
                 "venue": row["venue"],
@@ -903,7 +905,7 @@ async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
         meets.append(
             {
                 "season": row["season"],
-                "id": row["id"],
+                "id": str(row["id"]),
                 "officialname": f"{row['startdate'][:4]} {row['host']} {row['name']}",
                 "name": row["name"],
                 "venue": row["venue"],
@@ -938,7 +940,7 @@ async def fetch_latest_meet(db: asyncpg.Connection):
     if not row:
         raise NotFoundException(f"No recent meet!")
     return {
-        "id": row["id"],
+        "id": str(row["id"]),
         "name": row["name"],
         "officialname": f"{row['startdate'][:4]} {row['host']} {row['name']}",
         "venue": row["venue"],
