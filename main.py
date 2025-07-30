@@ -2,12 +2,13 @@ import asyncio
 import datetime
 import json
 import calendar
-import random
+import threading
 import os
 import base64
 import secrets
 import smtplib
 import ssl
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from passlib.hash import argon2
@@ -28,6 +29,8 @@ venues = {
     "CC": "Corpus Cristi ISD Natatorium",
     "CO": "Coronado Pool",
     "NE": "Josh Davis Natatorium/Bill Walker Pool",
+    "ND": "Josh Davvis Natatorium",
+    "NW": "Bill Walker Pool",
     "NS": "NISD Natatorium & Swim Center",
     "SA": "San Antonio Natatorium",
     "SW": "Southwest Aquatic Center",
@@ -51,6 +54,8 @@ venue_colors = {
     "CC": "99CCFF",
     "CO": "99CCFF",
     "NE": "CCCCFF",
+    "ND": "CCCCFF",
+    "NW": "CCCCFF",
     "NS": "66DD88",
     "SA": "FFCC99",
     "SW": "99FFCC",
@@ -63,7 +68,7 @@ venue_colors = {
     "SC": "99CCFF",
     "RR": "FFCCFF",
     "TBA": "FFFFFF",
-    "UNK": "FFFFFF"
+    "UNK": "FFFFFF",
 }
 
 
@@ -77,9 +82,9 @@ with open("creds.json", "r") as f:
 
 def welcome_email(email, name):
     message = MIMEMultipart("alternative")
-    message['From'] = creds['email']['sender_email']
-    message['To'] = email
-    message['Subject'] = "ghmvswim.org New User Registration"
+    message["From"] = creds["email"]["sender_email"]
+    message["To"] = email
+    message["Subject"] = "ghmvswim.org New User Registration"
     text = f"""Hey {name}!
     Welcome to ghmvswim.org, your go-to spot for all things GHMV swim!
     If you are a swimmer or parent and would like to link your account to a swimmer, please click the link here [insert link] to request linking.
@@ -90,10 +95,13 @@ def welcome_email(email, name):
     """
 
     message.attach(MIMEText(text, "plain"))
-    with smtplib.SMTP_SSL(creds['email']['smtp_url'], creds['email']['smtp_port'],
-                          context=ssl.create_default_context()) as server:
-        server.login(creds['email']['username'], creds['email']['password'])
-        server.sendmail(creds['email']['sender_email'], email, message.as_string())
+    with smtplib.SMTP_SSL(
+        creds["email"]["smtp_url"],
+        creds["email"]["smtp_port"],
+        context=ssl.create_default_context(),
+    ) as server:
+        server.login(creds["email"]["username"], creds["email"]["password"])
+        server.sendmail(creds["email"]["sender_email"], email, message.as_string())
 
 
 def create_date(start, end=None):
@@ -130,11 +138,11 @@ def sortByTime(e):
 
 async def get_event_name(db, e):
     ev = await fetch_event(db, e)
-    if ev['gender'] == "M":
+    if ev["gender"] == "M":
         return f"Men {ev['name']}"
-    if ev['gender'] == "F":
+    if ev["gender"] == "F":
         return f"Women {ev['name']}"
-    if ev['gender'] == "I":
+    if ev["gender"] == "I":
         return f"Mixed {ev['name']}"
 
 
@@ -156,28 +164,80 @@ def get_event_name_simple(e):
         return f"{e[:-1]} Butterfly"
 
 
-def generate_id(id_type: int, year: int = 0, join_date: int = None) -> int:
-    """
+class SnowflakeIDGenerator:
+    def __init__(self, grad_year, id_type, epoch=1409547600000):
+        """
+        Snowflake ID Generator
 
-    :param year: integer - Graduation Year
-    :param id_type: integer - 1: Swimmer, 2: Meet, 3: Entry, 4: Team, 5: User, 6: Attendance
-    :param join_date: integer - UNIX timestamp for when the swimmer joined the team
-    :return:
-    """
-    if join_date:
-        ts = join_date
-        # Set epoch to 1 September, 2014 00:00:00+0000
-        ts = ts - 1409547600
-    else:
-        ts = int(datetime.datetime.utcnow().timestamp())
-        # Set epoch to 1 September, 2014 00:00:00+0000
-        ts = ts - 1409547600
-    return (
-            (int(ts) << 16)
-            + (year << 20)
-            + (id_type << 24)
-            + (random.randint(1, 1000) << 32)
-    )
+        :param grad_year: Graduation Year of a Swimmer
+        :param id_type: 1: Swimmer, 2: Meet, 3: Entry, 4: Team, 5: User, 6: Attendance
+        :param epoch: A custom epoch to start counting from (in milliseconds).
+        """
+        self.year = grad_year
+        self.id_type = id_type
+        self.epoch = epoch
+        self.sequence = 0
+        self.last_timestamp = -1
+
+        # Constants
+        self.year_bits = 5
+        self.id_type_bits = 5
+        self.sequence_bits = 12
+
+        self.max_year = -1 ^ (-1 << self.year_bits)
+        self.max_id_type = -1 ^ (-1 << self.id_type_bits)
+        self.max_sequence = -1 ^ (-1 << self.sequence_bits)
+
+        self.year_shift = self.sequence_bits
+        self.id_type_shift = self.year_bits + self.sequence_bits
+        self.timestamp_shift = self.id_type_bits + self.sequence_bits + self.year_bits
+
+        self.lock = threading.Lock()
+
+        if self.year < 0 or self.year > self.max_year:
+            raise ValueError(f"Grad Year must be between 0 and {self.max_year}")
+
+        if self.id_type < 1 or self.id_type > 6:
+            raise ValueError(f"ID Type must be between 0 and 6")
+
+    def _current_timestamp(self):
+        return int(time.time() * 1000)
+
+    def _wait_for_next_millis(self, last_timestamp):
+        timestamp = self._current_timestamp()
+        while timestamp <= last_timestamp:
+            timestamp = self._current_timestamp()
+        return timestamp
+
+    def generate_id(self):
+        """
+        Generate a new Snowflake ID.
+
+        :return: A unique 64-bit ID.
+        """
+        with self.lock:
+            timestamp = self._current_timestamp()
+
+            if timestamp < self.last_timestamp:
+                raise Exception("Clock moved backwards. Refusing to generate ID.")
+
+            if timestamp == self.last_timestamp:
+                self.sequence = (self.sequence + 1) & self.max_sequence
+                if self.sequence == 0:
+                    timestamp = self._wait_for_next_millis(self.last_timestamp)
+            else:
+                self.sequence = 0
+
+            self.last_timestamp = timestamp
+
+            id_ = (
+                ((timestamp - self.epoch) << self.timestamp_shift)
+                | (self.year << self.year_shift)
+                | (self.id_type << self.id_type_shift)
+                | self.sequence
+            )
+
+            return id_
 
 
 async def fetch_standard(db: asyncpg.Connection, code):
@@ -216,14 +276,16 @@ async def fetch_entry(db: asyncpg.Connection, id: int):
         "standards": await fetch_standard(db, row["standards"]),
         "relay": None,
     }
-    if row['relay']:
+    if row["relay"]:
         try:
-            swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(id))
-            resp['relay'] = {
-                "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-                "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-                "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-                "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+            swimmers = await db.fetchrow(
+                "SELECT * FROM relays WHERE entry = $1", int(id)
+            )
+            resp["relay"] = {
+                "1": await fetch_swimmer_lite(db, swimmers["swimmer_1"]),
+                "2": await fetch_swimmer_lite(db, swimmers["swimmer_2"]),
+                "3": await fetch_swimmer_lite(db, swimmers["swimmer_3"]),
+                "4": await fetch_swimmer_lite(db, swimmers["swimmer_4"]),
             }
         except:
             pass
@@ -244,14 +306,16 @@ async def fetch_entry_lite(db: asyncpg.Connection, id: int):
         "standards": await fetch_standard(db, row["standards"]),
         "relay": None,
     }
-    if row['relay']:
+    if row["relay"]:
         try:
-            swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(id))
-            resp['relay'] = {
-                "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-                "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-                "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-                "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+            swimmers = await db.fetchrow(
+                "SELECT * FROM relays WHERE entry = $1", int(id)
+            )
+            resp["relay"] = {
+                "1": await fetch_swimmer_lite(db, swimmers["swimmer_1"]),
+                "2": await fetch_swimmer_lite(db, swimmers["swimmer_2"]),
+                "3": await fetch_swimmer_lite(db, swimmers["swimmer_3"]),
+                "4": await fetch_swimmer_lite(db, swimmers["swimmer_4"]),
             }
         except:
             pass
@@ -268,7 +332,7 @@ async def fetch_event(db: asyncpg.Connection, id: str):
         "distance": row["distance"],
         "stroke": row["stroke"],
         "relay": row["relay"],
-        "gender": row['gender']
+        "gender": row["gender"],
     }
 
 
@@ -289,14 +353,16 @@ async def fetch_event_all_entries(db: asyncpg.Connection, id: str):
             "standards": await fetch_standard(db, entry["standards"]),
             "relay": None,
         }
-        if entry['relay']:
+        if entry["relay"]:
             try:
-                swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
-                e['relay'] = {
-                    "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-                    "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-                    "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-                    "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+                swimmers = await db.fetchrow(
+                    "SELECT * FROM relays WHERE entry = $1", int(entry["id"])
+                )
+                e["relay"] = {
+                    "1": await fetch_swimmer_lite(db, swimmers["swimmer_1"]),
+                    "2": await fetch_swimmer_lite(db, swimmers["swimmer_2"]),
+                    "3": await fetch_swimmer_lite(db, swimmers["swimmer_3"]),
+                    "4": await fetch_swimmer_lite(db, swimmers["swimmer_4"]),
                 }
             except:
                 pass
@@ -305,7 +371,9 @@ async def fetch_event_all_entries(db: asyncpg.Connection, id: str):
 
 
 async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
-    rows = await db.fetch("SELECT * FROM entries WHERE event = $1 AND ignored = false", str(id))
+    rows = await db.fetch(
+        "SELECT * FROM entries WHERE event = $1 AND ignored = false", str(id)
+    )
     if not rows:
         raise NotFoundException(f"Event {id} does not exist!")
     entries = []
@@ -316,10 +384,17 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
         except IndexError:
             pass
         s = await fetch_swimmer(db, entry["swimmer"])
-        if entry['relay']:
+        if entry["relay"]:
             try:
-                swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
-                s_list = [swimmers["swimmer_1"], swimmers["swimmer_2"], swimmers["swimmer_3"], swimmers["swimmer_4"]]
+                swimmers = await db.fetchrow(
+                    "SELECT * FROM relays WHERE entry = $1", int(entry["id"])
+                )
+                s_list = [
+                    swimmers["swimmer_1"],
+                    swimmers["swimmer_2"],
+                    swimmers["swimmer_3"],
+                    swimmers["swimmer_4"],
+                ]
                 name = ""
                 for swimmer_id in s_list:
                     swimmer = await fetch_swimmer_lite(db, swimmer_id)
@@ -333,10 +408,10 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
         e = {
             "id": entry["id"],
             "swimmer": name,
-            "swimmer_id": s['id'],
-            "homeschool": s['homeschool'],
+            "swimmer_id": s["id"],
+            "homeschool": s["homeschool"],
             "meet": m,
-            "season": m['season'],
+            "season": m["season"],
             "event": await fetch_event(db, entry["event"]),
             "seed": entry["seed"],
             "time": entry["time"],
@@ -344,18 +419,20 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
             "standards": await fetch_standard(db, entry["standards"]),
             "relay": None,
         }
-        if entry['relay']:
+        if entry["relay"]:
             try:
-                swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
-                e['relay'] = {
-                    "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-                    "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-                    "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-                    "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+                swimmers = await db.fetchrow(
+                    "SELECT * FROM relays WHERE entry = $1", int(entry["id"])
+                )
+                e["relay"] = {
+                    "1": await fetch_swimmer_lite(db, swimmers["swimmer_1"]),
+                    "2": await fetch_swimmer_lite(db, swimmers["swimmer_2"]),
+                    "3": await fetch_swimmer_lite(db, swimmers["swimmer_3"]),
+                    "4": await fetch_swimmer_lite(db, swimmers["swimmer_4"]),
                 }
             except:
                 pass
-        if e['homeschool'] and official:
+        if e["homeschool"] and official:
             continue
         entries.append(e)
     entries.sort(key=top5Sort)
@@ -363,11 +440,11 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
     relayers = []
     top5 = []
     for entry in entries:
-        if entry['relay']:
-            if entry['relay'] in relayers:
+        if entry["relay"]:
+            if entry["relay"] in relayers:
                 continue
             else:
-                relayers.append(entry['relay'])
+                relayers.append(entry["relay"])
                 top5.append(entry)
         elif entry["swimmer_id"] in swimmers:
             continue
@@ -379,7 +456,8 @@ async def fetch_event_top_five(db: asyncpg.Connection, id: str, official=True):
 
 async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
     rows = await db.fetch(
-        "SELECT id FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name", str(team)
+        "SELECT id FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name",
+        str(team),
     )
     entries = {}
     m = await fetch_meet(db, meet)
@@ -395,24 +473,26 @@ async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
             e = {
                 "swim_id": s["id"],
                 "swimmer": name,
-                "homeschool": s['homeschool'],
-                "meet": m['designator'],
+                "homeschool": s["homeschool"],
+                "meet": m["designator"],
                 "event": await fetch_event(db, entry["event"]),
                 "seed": entry["seed"],
                 "time": entry["time"],
                 "season": m["season"],
-                "splits": json.loads(entry['splits']),
+                "splits": json.loads(entry["splits"]),
                 "standards": await fetch_standard(db, entry["standards"]),
                 "relay": None,
             }
-            if entry['relay']:
+            if entry["relay"]:
                 try:
-                    swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
-                    e['relay'] = {
-                        "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-                        "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-                        "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-                        "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+                    swimmers = await db.fetchrow(
+                        "SELECT * FROM relays WHERE entry = $1", int(entry["id"])
+                    )
+                    e["relay"] = {
+                        "1": await fetch_swimmer_lite(db, swimmers["swimmer_1"]),
+                        "2": await fetch_swimmer_lite(db, swimmers["swimmer_2"]),
+                        "3": await fetch_swimmer_lite(db, swimmers["swimmer_3"]),
+                        "4": await fetch_swimmer_lite(db, swimmers["swimmer_4"]),
                     }
                 except:
                     pass
@@ -429,7 +509,9 @@ async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
 
 
 async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
-    rows = await db.fetch("SELECT event FROM entries WHERE meet = $1 AND ignored = false", int(id))
+    rows = await db.fetch(
+        "SELECT event FROM entries WHERE meet = $1 AND ignored = false", int(id)
+    )
     if not rows:
         raise NotFoundException(f"Meet {id} does not exist!")
     entries = []
@@ -450,23 +532,25 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
             name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
             x = {
                 "swimmer": name,
-                "homeschool": s['homeschool'],
-                "meet": await fetch_meet(db, entry['meet']),
-                "event": await fetch_event(db, entry['event']),
+                "homeschool": s["homeschool"],
+                "meet": await fetch_meet(db, entry["meet"]),
+                "event": await fetch_event(db, entry["event"]),
                 "seed": entry["seed"],
                 "time": entry["time"],
                 "splits": json.loads(entry["splits"]),
                 "standards": await fetch_standard(db, entry["standards"]),
                 "relay": None,
             }
-            if entry['relay']:
+            if entry["relay"]:
                 try:
-                    swimmers = await db.fetchrow("SELECT * FROM relays WHERE entry = $1", int(entry['id']))
-                    x['relay'] = {
-                        "1": await fetch_swimmer_lite(db, swimmers['swimmer_1']),
-                        "2": await fetch_swimmer_lite(db, swimmers['swimmer_2']),
-                        "3": await fetch_swimmer_lite(db, swimmers['swimmer_3']),
-                        "4": await fetch_swimmer_lite(db, swimmers['swimmer_4'])
+                    swimmers = await db.fetchrow(
+                        "SELECT * FROM relays WHERE entry = $1", int(entry["id"])
+                    )
+                    x["relay"] = {
+                        "1": await fetch_swimmer_lite(db, swimmers["swimmer_1"]),
+                        "2": await fetch_swimmer_lite(db, swimmers["swimmer_2"]),
+                        "3": await fetch_swimmer_lite(db, swimmers["swimmer_3"]),
+                        "4": await fetch_swimmer_lite(db, swimmers["swimmer_4"]),
                     }
                 except:
                     pass
@@ -479,11 +563,11 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
 async def fetch_team_roster(db: asyncpg.Connection, id: str):
     rows = await db.fetch(
         "SELECT id FROM swimmers WHERE team = $1 AND active = true AND manager = false ORDER BY last_name, first_name, middle_name",
-        str(id)
+        str(id),
     )
     roster = []
     for swimmer in rows:
-        if swimmer['id'] in [1, 2, 3]:
+        if swimmer["id"] in [1, 2, 3]:
             continue
         s = await fetch_swimmer_lite(db, swimmer["id"])
         roster.append(s)
@@ -492,11 +576,12 @@ async def fetch_team_roster(db: asyncpg.Connection, id: str):
 
 async def fetch_team_managers(db: asyncpg.Connection, id: str):
     rows = await db.fetch(
-        "SELECT id FROM swimmers WHERE team = $1 AND active = true AND manager = true", str(id)
+        "SELECT id FROM swimmers WHERE team = $1 AND active = true AND manager = true",
+        str(id),
     )
     roster = []
     for swimmer in rows:
-        if swimmer['id'] in [1, 2, 3]:
+        if swimmer["id"] in [1, 2, 3]:
             continue
         s = await fetch_swimmer_lite(db, swimmer["id"])
         roster.append(s)
@@ -504,8 +589,10 @@ async def fetch_team_managers(db: asyncpg.Connection, id: str):
 
 
 async def fetch_team_roster_all(db: asyncpg.Connection, id: str):
-    rows = await db.fetch("SELECT id FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name",
-                          str(id))
+    rows = await db.fetch(
+        "SELECT id FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name",
+        str(id),
+    )
     roster = []
     for swimmer in rows:
         s = await fetch_swimmer_lite(db, swimmer["id"])
@@ -516,7 +603,8 @@ async def fetch_team_roster_all(db: asyncpg.Connection, id: str):
 async def fetch_team_roster_all_noperms(db: asyncpg.Connection, id: str):
     rows = await db.fetch(
         "SELECT id, last_name, first_name, middle_name, class FROM swimmers WHERE team = $1 ORDER BY last_name, first_name, middle_name",
-        str(id))
+        str(id),
+    )
     roster = []
     for swimmer in rows:
         s = await fetch_swimmer_noperms(db, swimmer["id"])
@@ -535,15 +623,21 @@ async def fetch_team(db: asyncpg.Connection, id: str):
         "email": row["email"],
         "phone": row["phone"],
         "code": row["code"],
-        "verification_code": row['verification_code']
+        "verification_code": row["verification_code"],
     }
 
 
 async def fetch_swimmer(db: asyncpg.Connection, id: int):
-    entries_i = await db.fetchrow("SELECT count(*) FROM entries WHERE swimmer = $1", int(id))
+    entries_i = await db.fetchrow(
+        "SELECT count(*) FROM entries WHERE swimmer = $1", int(id)
+    )
     entries_r = await db.fetchrow(
-        "SELECT count(*) FROM relays WHERE $1 in (swimmer_1, swimmer_2, swimmer_3, swimmer_4)", int(id))
-    meets = await db.fetch("SELECT DISTINCT meet FROM entries WHERE swimmer = $1", int(id))
+        "SELECT count(*) FROM relays WHERE $1 in (swimmer_1, swimmer_2, swimmer_3, swimmer_4)",
+        int(id),
+    )
+    meets = await db.fetch(
+        "SELECT DISTINCT meet FROM entries WHERE swimmer = $1", int(id)
+    )
     row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"Swimmer {id} does not exist!")
@@ -557,20 +651,22 @@ async def fetch_swimmer(db: asyncpg.Connection, id: int):
         "class": row["class"],
         "team": await fetch_team(db, row["team"]),
         "active": row["active"],
-        "homeschool": row['homeschool'],
-        "dob": row['dob'],
-        "usas_id": row['usas_id'],
-        "manager": row['manager'],
+        "homeschool": row["homeschool"],
+        "dob": row["dob"],
+        "usas_id": row["usas_id"],
+        "manager": row["manager"],
         "stats": {
             "entries": entries_i[0] + entries_r[0],
             "meet_count": len(meets),
-            "meets": json.dumps([list(record) for record in meets])
-        }
+            "meets": json.dumps([list(record) for record in meets]),
+        },
     }
 
 
 async def fetch_swimmer_entries(db: asyncpg.Connection, id: int):
-    rows = await db.fetch("SELECT event FROM entries WHERE swimmer = $1  AND ignored = false", int(id))
+    rows = await db.fetch(
+        "SELECT event FROM entries WHERE swimmer = $1  AND ignored = false", int(id)
+    )
     if not rows:
         raise NotFoundException(f"Swimmer {id} does not exist!")
     entries = []
@@ -594,7 +690,7 @@ async def fetch_swimmer_entries(db: asyncpg.Connection, id: int):
             obj["entries"].append(
                 {
                     "swimmer": name,
-                    "homeschool": s['homeschool'],
+                    "homeschool": s["homeschool"],
                     "meet": await fetch_meet(db, entry["meet"]),
                     "event": await fetch_event(db, entry["event"]),
                     "seed": entry["seed"],
@@ -650,7 +746,7 @@ async def fetch_swimmer_best_times(db: asyncpg.Connection, id: int):
             pass
         entry = {
             "swimmer": name,
-            "homeschool": s['homeschool'],
+            "homeschool": s["homeschool"],
             "meet": fastest["meet"],
             "event": fastest["event"],
             "seed": fastest["seed"],
@@ -664,7 +760,9 @@ async def fetch_swimmer_best_times(db: asyncpg.Connection, id: int):
 
 async def fetch_swimmer_entries_event(db: asyncpg.Connection, id: int, event: str):
     rows = await db.fetch(
-        "SELECT * FROM entries WHERE swimmer = $1 AND event = $2 AND ignored = false", int(id), str(event)
+        "SELECT * FROM entries WHERE swimmer = $1 AND event = $2 AND ignored = false",
+        int(id),
+        str(event),
     )
     if not rows:
         return []
@@ -675,7 +773,7 @@ async def fetch_swimmer_entries_event(db: asyncpg.Connection, id: int, event: st
         entries.append(
             {
                 "swimmer": name,
-                "homeschool": s['homeschool'],
+                "homeschool": s["homeschool"],
                 "meet": await fetch_meet(db, entry["meet"]),
                 "event": await fetch_event(db, entry["event"]),
                 "seed": entry["seed"],
@@ -688,7 +786,9 @@ async def fetch_swimmer_entries_event(db: asyncpg.Connection, id: int, event: st
 
 
 async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
-    entries = await db.fetchrow("SELECT count(*) FROM entries WHERE swimmer = $1", int(id))
+    entries = await db.fetchrow(
+        "SELECT count(*) FROM entries WHERE swimmer = $1", int(id)
+    )
     row = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", int(id))
     if not row:
         raise NotFoundException(f"Swimmer {id} does not exist!")
@@ -701,13 +801,11 @@ async def fetch_swimmer_lite(db: asyncpg.Connection, id: int):
         "gender": row["gender"],
         "class": row["class"],
         "active": row["active"],
-        "homeschool": row['homeschool'],
-        "usas_id": row['usas_id'],
-        "dob": row['dob'],
-        "manager": row['manager'],
-        "stats": {
-            "entries": entries[0]
-        }
+        "homeschool": row["homeschool"],
+        "usas_id": row["usas_id"],
+        "dob": row["dob"],
+        "manager": row["manager"],
+        "stats": {"entries": entries[0]},
     }
 
 
@@ -725,7 +823,9 @@ async def fetch_swimmer_noperms(db: asyncpg.Connection, id: int):
 
 
 async def fetch_meet(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT * FROM meets WHERE id = $1 ORDER BY startdate", int(id))
+    row = await db.fetchrow(
+        "SELECT * FROM meets WHERE id = $1 ORDER BY startdate", int(id)
+    )
     if not row:
         raise NotFoundException(f"Meet {id} does not exist!")
     return {
@@ -736,23 +836,23 @@ async def fetch_meet(db: asyncpg.Connection, id: int):
         "designator": row["designator"],
         "startdate": row["startdate"],
         "enddate": row["enddate"],
-        "date": create_date(row['startdate'], row['enddate']),
+        "date": create_date(row["startdate"], row["enddate"]),
         "season": row["season"],
-        "host": row['host'],
-        "notes": row['notes'],
-        "concluded": row['concluded'],
-        "format": row['format'],
-        "pwarmups": row['pwarmups'],
-        "fwarmups": row['fwarmups'],
-        "pstart": row['pstart'],
-        "fstart": row['fstart'],
-        "infopath": row['infopath'],
-        "heatspath": row['heatspath'],
-        "sessionpath": row['sessionpath'],
-        "resultspath": row['resultspath'],
-        "scorespath": row['scorespath'],
-        "psychpath": row['psychpath'],
-        "last_updated": row['last_updated'].isoformat(),
+        "host": row["host"],
+        "notes": row["notes"],
+        "concluded": row["concluded"],
+        "format": row["format"],
+        "pwarmups": row["pwarmups"],
+        "fwarmups": row["fwarmups"],
+        "pstart": row["pstart"],
+        "fstart": row["fstart"],
+        "infopath": row["infopath"],
+        "heatspath": row["heatspath"],
+        "sessionpath": row["sessionpath"],
+        "resultspath": row["resultspath"],
+        "scorespath": row["scorespath"],
+        "psychpath": row["psychpath"],
+        "last_updated": row["last_updated"].isoformat(),
     }
 
 
@@ -772,22 +872,22 @@ async def fetch_all_meets(db: asyncpg.Connection):
                 "designator": row["designator"],
                 "startdate": row["startdate"],
                 "enddate": row["enddate"],
-                "concluded": row['concluded'],
-                "format": row['format'],
-                "date": create_date(row['startdate'], row['enddate']),
-                "host": row['host'],
-                "notes": row['notes'],
-                "pwarmups": row['pwarmups'],
-                "fwarmups": row['fwarmups'],
-                "pstart": row['pstart'],
-                "fstart": row['fstart'],
-                "infopath": row['infopath'],
-                "heatspath": row['heatspath'],
-                "sessionpath": row['sessionpath'],
-                "resultspath": row['resultspath'],
-                "scorespath": row['scorespath'],
-                "psychpath": row['psychpath'],
-                "last_updated": row['last_updated'].isoformat(),
+                "concluded": row["concluded"],
+                "format": row["format"],
+                "date": create_date(row["startdate"], row["enddate"]),
+                "host": row["host"],
+                "notes": row["notes"],
+                "pwarmups": row["pwarmups"],
+                "fwarmups": row["fwarmups"],
+                "pstart": row["pstart"],
+                "fstart": row["fstart"],
+                "infopath": row["infopath"],
+                "heatspath": row["heatspath"],
+                "sessionpath": row["sessionpath"],
+                "resultspath": row["resultspath"],
+                "scorespath": row["scorespath"],
+                "psychpath": row["psychpath"],
+                "last_updated": row["last_updated"].isoformat(),
             }
         )
     meets.sort(key=lambda d: d["season"], reverse=True)
@@ -795,7 +895,9 @@ async def fetch_all_meets(db: asyncpg.Connection):
 
 
 async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
-    rows = await db.fetch("SELECT * FROM meets WHERE season = $1 ORDER BY startdate", int(season))
+    rows = await db.fetch(
+        "SELECT * FROM meets WHERE season = $1 ORDER BY startdate", int(season)
+    )
     if not rows:
         raise NotFoundException(f"No meets in season {season}")
     meets = []
@@ -810,29 +912,31 @@ async def fetch_meets_by_season(db: asyncpg.Connection, season: int):
                 "designator": row["designator"],
                 "startdate": row["startdate"],
                 "enddate": row["enddate"],
-                "concluded": row['concluded'],
-                "format": row['format'],
-                "date": create_date(row['startdate'], row['enddate']),
-                "host": row['host'],
-                "notes": row['notes'],
-                "pwarmups": row['pwarmups'],
-                "fwarmups": row['fwarmups'],
-                "pstart": row['pstart'],
-                "fstart": row['fstart'],
-                "infopath": row['infopath'],
-                "heatspath": row['heatspath'],
-                "sessionpath": row['sessionpath'],
-                "resultspath": row['resultspath'],
-                "scorespath": row['scorespath'],
-                "psychpath": row['psychpath'],
-                "last_updated": row['last_updated'].isoformat(),
+                "concluded": row["concluded"],
+                "format": row["format"],
+                "date": create_date(row["startdate"], row["enddate"]),
+                "host": row["host"],
+                "notes": row["notes"],
+                "pwarmups": row["pwarmups"],
+                "fwarmups": row["fwarmups"],
+                "pstart": row["pstart"],
+                "fstart": row["fstart"],
+                "infopath": row["infopath"],
+                "heatspath": row["heatspath"],
+                "sessionpath": row["sessionpath"],
+                "resultspath": row["resultspath"],
+                "scorespath": row["scorespath"],
+                "psychpath": row["psychpath"],
+                "last_updated": row["last_updated"].isoformat(),
             }
         )
     return meets
 
 
 async def fetch_latest_meet(db: asyncpg.Connection):
-    row = await db.fetchrow("SELECT * FROM meets WHERE concluded = true ORDER BY startdate DESC LIMIT 1")
+    row = await db.fetchrow(
+        "SELECT * FROM meets WHERE concluded = true ORDER BY startdate DESC LIMIT 1"
+    )
     if not row:
         raise NotFoundException(f"No recent meet!")
     return {
@@ -843,75 +947,79 @@ async def fetch_latest_meet(db: asyncpg.Connection):
         "designator": row["designator"],
         "startdate": row["startdate"],
         "enddate": row["enddate"],
-        "concluded": row['concluded'],
-        "format": row['format'],
-        "date": create_date(row['startdate'], row['enddate']),
+        "concluded": row["concluded"],
+        "format": row["format"],
+        "date": create_date(row["startdate"], row["enddate"]),
         "season": row["season"],
-        "host": row['host'],
-        "notes": row['notes'],
-        "pwarmups": row['pwarmups'],
-        "fwarmups": row['fwarmups'],
-        "pstart": row['pstart'],
-        "fstart": row['fstart'],
-        "infopath": row['infopath'],
-        "heatspath": row['heatspath'],
-        "sessionpath": row['sessionpath'],
-        "resultspath": row['resultspath'],
-        "scorespath": row['scorespath'],
-        "psychpath": row['psychpath'],
-        "last_updated": row['last_updated'].isoformat(),
+        "host": row["host"],
+        "notes": row["notes"],
+        "pwarmups": row["pwarmups"],
+        "fwarmups": row["fwarmups"],
+        "pstart": row["pstart"],
+        "fstart": row["fstart"],
+        "infopath": row["infopath"],
+        "heatspath": row["heatspath"],
+        "sessionpath": row["sessionpath"],
+        "resultspath": row["resultspath"],
+        "scorespath": row["scorespath"],
+        "psychpath": row["psychpath"],
+        "last_updated": row["last_updated"].isoformat(),
     }
 
 
 async def fetch_all_users(db: asyncpg.Connection):
     rows = await db.fetch(
-        "SELECT id, username, name, email, permissions, active, linked_swimmer, latest_access FROM users ORDER BY name")
+        "SELECT id, username, name, email, permissions, active, linked_swimmer, latest_access FROM users ORDER BY name"
+    )
     if not rows:
         raise NotFoundException(f"No users found!")
     users = []
     for row in rows:
-        if row['linked_swimmer']:
-            ls = await fetch_swimmer_lite(db, row['linked_swimmer'])
+        if row["linked_swimmer"]:
+            ls = await fetch_swimmer_lite(db, row["linked_swimmer"])
         else:
             ls = None
         users.append(
             {
-                "id": row['id'],
+                "id": row["id"],
                 "username": row["username"],
                 "name": row["name"],
                 "email": row["email"],
                 "permissions": row["permissions"],
                 "linked_swimmer": ls,
                 "active": row["active"],
-                "latest_access": row["latest_access"].strftime('%Y-%m-%d %H:%M:%S')
+                "latest_access": row["latest_access"].strftime("%Y-%m-%d %H:%M:%S"),
             }
         )
     return users
 
 
 async def fetch_user(db: asyncpg.Connection, id: int):
-    row = await db.fetchrow("SELECT id, username, name, email, permissions, active, linked_swimmer, latest_access "
-                            "FROM users WHERE id = $1", int(id))
+    row = await db.fetchrow(
+        "SELECT id, username, name, email, permissions, active, linked_swimmer, latest_access "
+        "FROM users WHERE id = $1",
+        int(id),
+    )
     if not row:
         raise NotFoundException(f"No user found!")
-    if row['linked_swimmer']:
-        ls = await fetch_swimmer_lite(db, row['linked_swimmer'])
+    if row["linked_swimmer"]:
+        ls = await fetch_swimmer_lite(db, row["linked_swimmer"])
     else:
         ls = None
     return {
-        "id": row['id'],
+        "id": row["id"],
         "username": row["username"],
         "name": row["name"],
         "email": row["email"],
         "permissions": row["permissions"],
         "active": row["active"],
         "linked_swimmer": ls,
-        "latest_access": row['latest_access'].strftime('%Y-%m-%d %H:%M:%S')
+        "latest_access": row["latest_access"].strftime("%Y-%m-%d %H:%M:%S"),
     }
 
 
 def handle_json_error(
-        func: Callable[[web.Request], Awaitable[web.Response]]
+    func: Callable[[web.Request], Awaitable[web.Response]],
 ) -> Callable[[web.Request], Awaitable[web.Response]]:
     async def handler(request: web.Request) -> web.Response:
         try:
@@ -943,7 +1051,9 @@ async def auth_required(request: web.Request, permissions: int = 0):
             status=400,
         )
     db = request.config_dict["DB"]
-    r = await db.fetchrow("SELECT user_id FROM auth_tokens WHERE token = $1", str(token))
+    r = await db.fetchrow(
+        "SELECT user_id FROM auth_tokens WHERE token = $1", str(token)
+    )
     if r is None:
         resp = web.json_response(
             {"status": "unauthorized", "reason": "mismatched token"}, status=401
@@ -954,8 +1064,8 @@ async def auth_required(request: web.Request, permissions: int = 0):
             "SELECT permissions FROM users WHERE id = $1", int(r["user_id"])
         )
         if permissions <= r2["permissions"]:
-            resp = web.json_response({"status": "ok", "id": r['user_id']})
-            resp.user_id = r['user_id']
+            resp = web.json_response({"status": "ok", "id": r["user_id"]})
+            resp.user_id = r["user_id"]
             return resp
         else:
             resp = web.json_response(
@@ -965,7 +1075,7 @@ async def auth_required(request: web.Request, permissions: int = 0):
                 },
                 status=403,
             )
-            resp.user_id = r['user_id']
+            resp.user_id = r["user_id"]
             return resp
 
 
@@ -984,24 +1094,30 @@ async def create_standard(request: web.Request) -> web.Response:
         return a
     db = request.config_dict["DB"]
     info = await request.json()
-    name = info['name']
-    org = info['org']
-    min_time = info['time']
-    code = info['code']
-    year = info['year']
-    age = info['age']
-    gender = info['gender']
-    short_name = info['short_name']
-    course = info['course']
-    event = info['event']
+    name = info["name"]
+    org = info["org"]
+    min_time = info["time"]
+    code = info["code"]
+    year = info["year"]
+    age = info["age"]
+    gender = info["gender"]
+    short_name = info["short_name"]
+    course = info["course"]
+    event = info["event"]
     await db.execute(
         "INSERT INTO standards (name, authority, min_time, code, year, age, gender, short_name, course)"
-        " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", name, org, min_time, code, int(year), age, gender, short_name,
-        course
+        " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        name,
+        org,
+        min_time,
+        code,
+        int(year),
+        age,
+        gender,
+        short_name,
+        course,
     )
-    await db.execute(
-        "UPDATE standards set event = $1 where code = $2", event, code
-    )
+    await db.execute("UPDATE standards set event = $1 where code = $2", event, code)
     return web.json_response(info)
 
 
@@ -1014,13 +1130,18 @@ async def submit_attendance(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     info = await request.json()
     payload: dict = info
-    date = payload.pop('date')
-    type = payload.pop('type')
+    date = payload.pop("date")
+    type = payload.pop("type")
     resp = {"date": date, "type": type}
     for swimmer in payload:
         await db.execute(
             "INSERT INTO attendance (date, swimmer, status, type) VALUES ($1, $2, $3, $4) ON CONFLICT (date, "
-            "swimmer, type) DO UPDATE SET status = $3", date, int(swimmer), payload[swimmer], type)
+            "swimmer, type) DO UPDATE SET status = $3",
+            date,
+            int(swimmer),
+            payload[swimmer],
+            type,
+        )
         resp[swimmer] = payload[swimmer]
     return web.json_response(resp)
 
@@ -1032,12 +1153,14 @@ async def get_attendance_date(request: web.Request) -> web.Response:
     if a.status != 200:
         return a
     db = request.config_dict["DB"]
-    date = request.match_info['date']
-    type = request.match_info['type']
-    rows = await db.fetch("SELECT * FROM attendance WHERE date = $1 and type = $2", date, type)
-    resp = {'date': date}
+    date = request.match_info["date"]
+    type = request.match_info["type"]
+    rows = await db.fetch(
+        "SELECT * FROM attendance WHERE date = $1 and type = $2", date, type
+    )
+    resp = {"date": date}
     for swimmer in rows:
-        resp[swimmer['swimmer']] = swimmer['status']
+        resp[swimmer["swimmer"]] = swimmer["status"]
     return web.json_response(resp)
 
 
@@ -1048,11 +1171,17 @@ async def get_attendance_swimmer(request: web.Request) -> web.Response:
     if a.status != 200:
         return a
     db = request.config_dict["DB"]
-    swimmer = request.match_info['swimmer']
-    rows = await db.fetch("SELECT * FROM attendance WHERE swimmer = $1 ORDER BY date DESC", int(swimmer))
-    resp = {'swimmer': await fetch_swimmer(db, swimmer), 'records': {}}
+    swimmer = request.match_info["swimmer"]
+    rows = await db.fetch(
+        "SELECT * FROM attendance WHERE swimmer = $1 ORDER BY date DESC", int(swimmer)
+    )
+    resp = {"swimmer": await fetch_swimmer(db, swimmer), "records": {}}
     for date in rows:
-        resp['records'][f"{date['date']}-{date['type']}"] = [date['date'], date['status'], date['type']]
+        resp["records"][f"{date['date']}-{date['type']}"] = [
+            date["date"],
+            date["status"],
+            date["type"],
+        ]
     return web.json_response(resp)
 
 
@@ -1069,9 +1198,13 @@ async def auth_check(request: web.Request) -> web.Response:
         int(token["user_id"]),
     )
     ts = datetime.datetime.now().isoformat()
-    await db.execute("UPDATE users SET latest_access = default WHERE id = $1", int(token["user_id"]))
-    if r['active'] is False:
-        return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
+    await db.execute(
+        "UPDATE users SET latest_access = default WHERE id = $1", int(token["user_id"])
+    )
+    if r["active"] is False:
+        return web.json_response(
+            {"status": "failed", "reason": "forbidden"}, status=403
+        )
     return web.json_response(
         {
             "status": "ok",
@@ -1081,7 +1214,7 @@ async def auth_check(request: web.Request) -> web.Response:
                 "username": r["username"],
                 "email": r["email"],
                 "permissions": r["permissions"],
-                "linked_swimmer": r['linked_swimmer']
+                "linked_swimmer": r["linked_swimmer"],
             },
         }
     )
@@ -1094,20 +1227,20 @@ async def add_calendar_event(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=4)
     if a.status != 200:
         return a
-    name = info['name']
-    date = info['date']
-    time = info['time']
-    urgent = info['urgent']
+    name = info["name"]
+    date = info["date"]
+    time = info["time"]
+    urgent = info["urgent"]
     db = request.config_dict["DB"]
-    await db.execute("INSERT INTO calendar (name, date, time, urgent) VALUES ($1, $2, $3, $4)", name, date, time,
-                     urgent)
+    await db.execute(
+        "INSERT INTO calendar (name, date, time, urgent) VALUES ($1, $2, $3, $4)",
+        name,
+        date,
+        time,
+        urgent,
+    )
     return web.json_response(
-        {
-            "name": name,
-            "date": date,
-            "time": time,
-            "urgent": urgent
-        }
+        {"name": name, "date": date, "time": time, "urgent": urgent}
     )
 
 
@@ -1116,15 +1249,20 @@ async def add_calendar_event(request: web.Request) -> web.Response:
 @handle_json_error
 async def register_user(request: web.Request) -> web.Response:
     info = await request.json()
-    name = info['name']
-    username = info['username']
-    email = info['email']
+    name = info["name"]
+    username = info["username"]
+    email = info["email"]
     password = argon2.hash(info["password"])
-    id = generate_id(5)
+    id = SnowflakeIDGenerator(grad_year=0, id_type=5).generate_id()
     db = request.config_dict["DB"]
     await db.execute(
         "INSERT INTO users (id, name, password, email, permissions, username) VALUES ($1, $2, $3, $4, $5, $6)",
-        id, name, password, email, int(0), username,
+        id,
+        name,
+        password,
+        email,
+        int(0),
+        username,
     )
     # welcome_email(email, name)
     return web.json_response(
@@ -1145,36 +1283,63 @@ async def req_linking(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    user_id = info['user_id']
-    verf_code = info['verification_code']
-    dob = info['dob']
+    user_id = info["user_id"]
+    verf_code = info["verification_code"]
+    dob = info["dob"]
     db = request.config_dict["DB"]
-    team_code = info['team']
-    swimmer = await fetch_swimmer(db, info['swimmer_id'])
-    if swimmer['dob'] is None:
-        return web.json_response({"status": "failed", "reason": "swimmer is not capable of being linked"}, status=406)
+    team_code = info["team"]
+    swimmer = await fetch_swimmer(db, info["swimmer_id"])
+    if swimmer["dob"] is None:
+        return web.json_response(
+            {"status": "failed", "reason": "swimmer is not capable of being linked"},
+            status=406,
+        )
     team = await fetch_team(db, team_code)
-    prev_reqs = await db.fetch("SELECT count(*) FROM linking_requests WHERE user_id = $1 AND status = 'unapproved'",
-                               int(user_id))
-    if int(prev_reqs[0]['count']) > 0:
-        return web.json_response({"status": "failed", "reason": "user has already requested linking"}, status=409)
-    if verf_code == team['verification_code'] and dob == swimmer['dob']:
+    prev_reqs = await db.fetch(
+        "SELECT count(*) FROM linking_requests WHERE user_id = $1 AND status = 'unapproved'",
+        int(user_id),
+    )
+    if int(prev_reqs[0]["count"]) > 0:
+        return web.json_response(
+            {"status": "failed", "reason": "user has already requested linking"},
+            status=409,
+        )
+    if verf_code == team["verification_code"] and dob == swimmer["dob"]:
         await db.execute(
             "INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match, status, approved_by) "
-            "VALUES ($1, $2, true, true, 'approved', 'auto (dob/code match)')", int(user_id), int(info['swimmer_id']))
-        await db.execute("UPDATE users SET linked_swimmer = $1 WHERE id = $2", int(swimmer['id']), int(user_id))
-    elif verf_code == team['verification_code'] and dob != swimmer['dob']:
-        await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
-                         "$2, true, false)", int(user_id), int(info['swimmer_id']))
-    elif verf_code != team['verification_code'] and dob == swimmer['dob']:
-        await db.execute("INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
-                         "$2, false, true)", int(user_id), int(info['swimmer_id']))
-    elif verf_code != team['verification_code'] and dob != swimmer['dob']:
+            "VALUES ($1, $2, true, true, 'approved', 'auto (dob/code match)')",
+            int(user_id),
+            int(info["swimmer_id"]),
+        )
+        await db.execute(
+            "UPDATE users SET linked_swimmer = $1 WHERE id = $2",
+            int(swimmer["id"]),
+            int(user_id),
+        )
+    elif verf_code == team["verification_code"] and dob != swimmer["dob"]:
+        await db.execute(
+            "INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
+            "$2, true, false)",
+            int(user_id),
+            int(info["swimmer_id"]),
+        )
+    elif verf_code != team["verification_code"] and dob == swimmer["dob"]:
+        await db.execute(
+            "INSERT INTO linking_requests (user_id, swimmer_id, code_match, dob_match) VALUES ($1, "
+            "$2, false, true)",
+            int(user_id),
+            int(info["swimmer_id"]),
+        )
+    elif verf_code != team["verification_code"] and dob != swimmer["dob"]:
         await db.execute(
             "INSERT INTO linking_requests (user_id, swimmer_id, status, dob_match, code_match, approved_by) "
-            "VALUES ($1, $2, 'rejected', false, false, 'auto (dob/code mismatch')", int(user_id),
-            int(info['swimmer_id']))
-    return web.json_response({"status": "success", "reason": "submitted request"}, status=200)
+            "VALUES ($1, $2, 'rejected', false, false, 'auto (dob/code mismatch')",
+            int(user_id),
+            int(info["swimmer_id"]),
+        )
+    return web.json_response(
+        {"status": "success", "reason": "submitted request"}, status=200
+    )
 
 
 @router.get("/users/linking/requests")
@@ -1183,12 +1348,20 @@ async def linking_requests(request: web.Request) -> web.Response:
     if a.status != 200:
         return a
     db = request.config_dict["DB"]
-    reqs = await db.fetch("SELECT * FROM linking_requests WHERE user_id = $1", int(a.user_id))
+    reqs = await db.fetch(
+        "SELECT * FROM linking_requests WHERE user_id = $1", int(a.user_id)
+    )
     reqs_list = []
     for req in reqs:
-        reqs_list.append({"swimmer": await fetch_swimmer_lite(db, req['swimmer_id']),
-                          "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'],
-                          "code_match": req['code_match'], "dob_match": req['dob_match']})
+        reqs_list.append(
+            {
+                "swimmer": await fetch_swimmer_lite(db, req["swimmer_id"]),
+                "submitted_at": req["created_at"].strftime("%Y-%m-%d %H:%M:%S"),
+                "status": req["status"],
+                "code_match": req["code_match"],
+                "dob_match": req["dob_match"],
+            }
+        )
     return web.json_response(reqs_list)
 
 
@@ -1202,9 +1375,15 @@ async def linking_requests_queue(request: web.Request) -> web.Response:
     reqs_list = []
     for req in reqs:
         reqs_list.append(
-            {"user": await fetch_user(db, req['user_id']), "swimmer": await fetch_swimmer_lite(db, req['swimmer_id']),
-             "submitted_at": req["created_at"].strftime('%Y-%m-%d %H:%M:%S'), "status": req['status'],
-             "code_match": req['code_match'], "dob_match": req['dob_match']})
+            {
+                "user": await fetch_user(db, req["user_id"]),
+                "swimmer": await fetch_swimmer_lite(db, req["swimmer_id"]),
+                "submitted_at": req["created_at"].strftime("%Y-%m-%d %H:%M:%S"),
+                "status": req["status"],
+                "code_match": req["code_match"],
+                "dob_match": req["dob_match"],
+            }
+        )
     return web.json_response(reqs_list)
 
 
@@ -1214,14 +1393,21 @@ async def approve_linking(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=4)
     if a.status != 200:
         return a
-    user_id = info['user_id']
-    swimmer_id = info['swimmer_id']
+    user_id = info["user_id"]
+    swimmer_id = info["swimmer_id"]
     db = request.config_dict["DB"]
-    await db.execute("UPDATE users SET linked_swimmer = $1 WHERE id = $2", swimmer_id, user_id)
+    await db.execute(
+        "UPDATE users SET linked_swimmer = $1 WHERE id = $2", swimmer_id, user_id
+    )
     await db.execute(
         "UPDATE linking_requests SET status = 'approved', approved_by = $1 WHERE user_id = $2 AND swimmer_id = $3",
-        str(a.user_id), int(user_id), int(swimmer_id))
-    return web.json_response({"status": "success", "reason": "linked swimmer"}, status=200)
+        str(a.user_id),
+        int(user_id),
+        int(swimmer_id),
+    )
+    return web.json_response(
+        {"status": "success", "reason": "linked swimmer"}, status=200
+    )
 
 
 @router.post("/users/linking/reject")
@@ -1230,13 +1416,18 @@ async def reject_linking(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=4)
     if a.status != 200:
         return a
-    user_id = info['user_id']
-    swimmer_id = info['swimmer_id']
+    user_id = info["user_id"]
+    swimmer_id = info["swimmer_id"]
     db = request.config_dict["DB"]
     await db.execute(
         "UPDATE linking_requests SET status = 'rejected', approved_by = $1 WHERE user_id = $2 AND swimmer_id = $3",
-        str(a.user_id), int(user_id), int(swimmer_id))
-    return web.json_response({"status": "success", "reason": "rejected linking"}, status=200)
+        str(a.user_id),
+        int(user_id),
+        int(swimmer_id),
+    )
+    return web.json_response(
+        {"status": "success", "reason": "rejected linking"}, status=200
+    )
 
 
 @router.post("/users")
@@ -1254,11 +1445,16 @@ async def create_user(request: web.Request) -> web.Response:
         permissions = info["permissions"]
     else:
         permissions = 0
-    id = generate_id(5)
+    id = SnowflakeIDGenerator(grad_year=0, id_type=5).generate_id()
     db = request.config_dict["DB"]
     await db.execute(
         "INSERT INTO users (id, name, password, email, permissions, username) VALUES ($1, $2, $3, $4, $5, $6)",
-        id, name, password, email, int(permissions), username,
+        id,
+        name,
+        password,
+        email,
+        int(permissions),
+        username,
     )
     return web.json_response(
         {
@@ -1277,7 +1473,7 @@ async def get_all_user(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=4)
     if a.status != 200:
         return a
-    db = request.config_dict['DB']
+    db = request.config_dict["DB"]
     users = await fetch_all_users(db)
     return web.json_response(users)
 
@@ -1288,14 +1484,16 @@ async def get_user(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    user_id = request.match_info['id']
+    user_id = request.match_info["id"]
     if user_id == "me" or user_id == a.user_id:
         user_id = a.user_id
     elif (await auth_required(request, permissions=4)).status == 200:
         pass
     else:
-        return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
-    db = request.config_dict['DB']
+        return web.json_response(
+            {"status": "failed", "reason": "forbidden"}, status=403
+        )
+    db = request.config_dict["DB"]
     user = await fetch_user(db, user_id)
     return web.json_response(user)
 
@@ -1306,46 +1504,44 @@ async def edit_user(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    user_id = request.match_info['id']
+    user_id = request.match_info["id"]
     fields = {}
     user = await request.json()
     if a.user_id == user_id:
         pass
     elif (await auth_required(request, permissions=4)).status == 200:
         if "permissions" in user:
-            fields['permissions'] = user['permissions']
+            fields["permissions"] = user["permissions"]
         if "active" in user:
-            fields['active'] = user['active']
+            fields["active"] = user["active"]
         if "linked_swimmer" in user:
-            fields['linked_swimmer'] = user['linked_swimmer']
+            fields["linked_swimmer"] = user["linked_swimmer"]
     else:
-        return web.json_response({"status": "failed", "reason": "forbidden"}, status=403)
+        return web.json_response(
+            {"status": "failed", "reason": "forbidden"}, status=403
+        )
     if "name" in user:
-        fields["name"] = user['name']
+        fields["name"] = user["name"]
     if "email" in user:
-        fields["email"] = user['email']
+        fields["email"] = user["email"]
     if "username" in user:
-        fields["username"] = user['username']
-    db = request.config_dict['DB']
+        fields["username"] = user["username"]
+    db = request.config_dict["DB"]
     if fields:
         field_values = ""
         for field in fields:
             field_values += f"{field} = {fields[field]}"
-        await db.execute(
-            f"UPDATE users SET {field_values} WHERE id = $1", int(user_id)
-        )
-    user = await db.fetchrow(
-        "SELECT * FROM users WHERE id = $1", int(user_id)
-    )
+        await db.execute(f"UPDATE users SET {field_values} WHERE id = $1", int(user_id))
+    user = await db.fetchrow("SELECT * FROM users WHERE id = $1", int(user_id))
     return web.json_response(
         {
-            "id": user['id'],
-            "name": user['name'],
-            "username": user['username'],
-            "email": user['email'],
-            "permissions": user['permissions'],
-            "active": user['active'],
-            "linked_swimmer": user['linked_swimmer']
+            "id": user["id"],
+            "name": user["name"],
+            "username": user["username"],
+            "email": user["email"],
+            "permissions": user["permissions"],
+            "active": user["active"],
+            "linked_swimmer": user["linked_swimmer"],
         }
     )
 
@@ -1356,19 +1552,23 @@ async def change_password(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    req_id = request.match_info['id']
+    req_id = request.match_info["id"]
     if int(a.user_id) != int(req_id):
-        return web.json_response({"status": "failed", "reason": f"forbidden - your ID is {a.user_id} while you are "
-                                                                f"trying to access {req_id}"}, status=403)
+        return web.json_response(
+            {
+                "status": "failed",
+                "reason": f"forbidden - your ID is {a.user_id} while you are "
+                f"trying to access {req_id}",
+            },
+            status=403,
+        )
     info = await request.json()
     id = req_id
-    old_password = info['old_password']
-    new_password = info['new_password']
-    db = request.config_dict['DB']
-    ir = await db.fetchrow(
-        "SELECT password FROM users WHERE id = $1", int(id)
-    )
-    if not argon2.verify(old_password, ir['password']):
+    old_password = info["old_password"]
+    new_password = info["new_password"]
+    db = request.config_dict["DB"]
+    ir = await db.fetchrow("SELECT password FROM users WHERE id = $1", int(id))
+    if not argon2.verify(old_password, ir["password"]):
         return web.json_response(
             {"status": "failed", "reason": "incorrect old password"}, status=401
         )
@@ -1377,9 +1577,7 @@ async def change_password(request: web.Request) -> web.Response:
         await db.execute(
             "UPDATE users SET password = $1 WHERE id = $2", hashed, int(id)
         )
-        return web.json_response(
-            {"status": "ok", "reason": "password reset!"}
-        )
+        return web.json_response({"status": "ok", "reason": "password reset!"})
 
 
 @router.post("/auth/login")
@@ -1409,7 +1607,7 @@ async def login(request: web.Request) -> web.Response:
             "INSERT INTO auth_tokens (user_id, token, timestamp) VALUES ($1, $2, $3)",
             int(r["id"]),
             str(token),
-            str(ts)
+            str(ts),
         )
         return web.json_response({"user_id": r["id"], "token": token})
 
@@ -1429,14 +1627,10 @@ async def create_swimmer(request: web.Request) -> web.Response:
     team = info["team"]
     gender = info["gender"]
     if "dob" in info:
-        dob = info['dob']
+        dob = info["dob"]
     else:
         dob = None
-    if "join_date" in info:
-        join_date = info["join_date"]
-        id = generate_id(1, year, join_date)
-    else:
-        id = generate_id(1, year)
+    id = SnowflakeIDGenerator(grad_year=year, id_type=1).generate_id()
     if "active" in info:
         active = bool(info["active"])
     else:
@@ -1453,7 +1647,7 @@ async def create_swimmer(request: web.Request) -> web.Response:
         team,
         bool(active),
         gender,
-        dob
+        dob,
     )
     return web.json_response(
         {
@@ -1474,7 +1668,7 @@ async def edit_swimmer(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=3)
     if a.status != 200:
         return a
-    swimmer_id = request.match_info['id']
+    swimmer_id = request.match_info["id"]
     swimmer = await request.json()
     fields = {}
     if "first_name" in swimmer:
@@ -1484,42 +1678,40 @@ async def edit_swimmer(request: web.Request) -> web.Response:
     if "last_name" in swimmer:
         fields["last_name"] = f"'{swimmer['last_name']}'"
     if "class" in swimmer:
-        fields["class"] = swimmer['class']
+        fields["class"] = swimmer["class"]
     if "active" in swimmer:
-        fields["active"] = swimmer['active']
+        fields["active"] = swimmer["active"]
     if "usas_id" in swimmer:
         fields["usas_id"] = f"'{swimmer['usas_id']}'"
     if "manager" in swimmer:
-        fields['manager'] = swimmer['manager']
+        fields["manager"] = swimmer["manager"]
     if "homeschool" in swimmer:
-        fields['homeschool'] = swimmer['homeschool']
+        fields["homeschool"] = swimmer["homeschool"]
     if "dob" in swimmer:
-        fields['dob'] = f"'{swimmer['dob']}'"
+        fields["dob"] = f"'{swimmer['dob']}'"
     if fields:
         field_values = ""
         for field in fields:
             field_values += f"{field} = {fields[field]}, "
-        db = request.config_dict['DB']
+        db = request.config_dict["DB"]
         await db.execute(
             f"UPDATE swimmers SET {field_values[:-2]} WHERE id = $1", int(swimmer_id)
         )
-    swimmer = await db.fetchrow(
-        "SELECT * FROM swimmers WHERE id = $1", int(swimmer_id)
-    )
+    swimmer = await db.fetchrow("SELECT * FROM swimmers WHERE id = $1", int(swimmer_id))
     return web.json_response(
         {
-            "id": swimmer['id'],
-            "first_name": swimmer['first_name'],
-            "middle_name": swimmer['middle_name'],
-            "last_name": swimmer['last_name'],
-            "age": swimmer['age'],
-            "class": swimmer['class'],
-            "team": await fetch_team(db, swimmer['team']),
-            "active": swimmer['active'],
-            "usas_id": swimmer['usas_id'],
-            "dob": swimmer['dob'],
-            "manager": swimmer['manager'],
-            "homeschool": swimmer['homeschool']
+            "id": swimmer["id"],
+            "first_name": swimmer["first_name"],
+            "middle_name": swimmer["middle_name"],
+            "last_name": swimmer["last_name"],
+            "age": swimmer["age"],
+            "class": swimmer["class"],
+            "team": await fetch_team(db, swimmer["team"]),
+            "active": swimmer["active"],
+            "usas_id": swimmer["usas_id"],
+            "dob": swimmer["dob"],
+            "manager": swimmer["manager"],
+            "homeschool": swimmer["homeschool"],
         }
     )
 
@@ -1530,10 +1722,10 @@ async def change_class_status(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=3)
     if a.status != 200:
         return a
-    class_id = request.match_info['id']
+    class_id = request.match_info["id"]
     json = await request.json()
-    active = bool(json['active'])
-    db = request.config_dict['DB']
+    active = bool(json["active"])
+    db = request.config_dict["DB"]
     await db.execute(
         "UPDATE swimmers SET active = $1 WHERE class = $2", active, int(class_id)
     )
@@ -1617,7 +1809,7 @@ async def create_team(request: web.Request) -> web.Response:
     email = info["email"]
     phone = info["phone"]
     code = info["code"]
-    id = generate_id(4)
+    id = SnowflakeIDGenerator(grad_year=0, id_type=4).generate_id()
     db = request.config_dict["DB"]
     await db.execute(
         "INSERT INTO teams (id, name, address, head_coach, email, phone, code) VALUES($1, $2, $3, $4, $5, $6, $7)",
@@ -1715,10 +1907,10 @@ async def create_meet(request: web.Request) -> web.Response:
     designator = info["designator"]
     startdate = info["startdate"]
     season = info["season"]
-    format = info['format']
-    host = info['host']
-    concluded = info['concluded']
-    id = generate_id(2)
+    format = info["format"]
+    host = info["host"]
+    concluded = info["concluded"]
+    id = SnowflakeIDGenerator(grad_year=0, id_type=2).generate_id()
     db = request.config_dict["DB"]
     await db.execute(
         "INSERT INTO meets "
@@ -1745,7 +1937,7 @@ async def create_meet(request: web.Request) -> web.Response:
             "season": season,
             "concluded": concluded,
             "host": host,
-            "format": format
+            "format": format,
         }
     )
 
@@ -1770,40 +1962,39 @@ async def update_meet_dtinfo(request: web.Request) -> web.Response:
         fields["startdate"] = f"'{info['startdate']}'"
     if "enddate" in info:
         fields["enddate"] = f"'{info['enddate']}'"
-    db = request.config_dict['DB']
+    db = request.config_dict["DB"]
     if fields:
         field_values = ""
         for field in fields:
             field_values += f"{field} = {fields[field]}, "
         await db.execute(
-            f"UPDATE meets SET {field_values[:-2]}, last_updated = default WHERE id = $1", int(meet_id)
+            f"UPDATE meets SET {field_values[:-2]}, last_updated = default WHERE id = $1",
+            int(meet_id),
         )
-    meet = await db.fetchrow(
-        "SELECT * FROM meets WHERE id = $1", int(meet_id)
-    )
+    meet = await db.fetchrow("SELECT * FROM meets WHERE id = $1", int(meet_id))
     return web.json_response(
         {
             "id": meet_id,
-            "name": meet['name'],
-            "venue": meet['venue'],
-            "designator": meet['designator'],
-            "startdate": meet['startdate'],
-            "enddate": meet['enddate'],
-            "season": meet['season'],
-            "concluded": meet['concluded'],
-            "host": meet['host'],
-            "format": meet['format'],
-            "pwarmups": meet['pwarmups'],
-            "fwarmups": meet['fwarmups'],
-            "pstart": meet['pstart'],
-            "fstart": meet['fstart'],
-            "infopath": meet['infopath'],
-            "heatspath": meet['heatspath'],
-            "sessionpath": meet['sessionpath'],
-            "resultspath": meet['resultspath'],
-            "scorespath": meet['scorespath'],
-            "psychpath": meet['psychpath'],
-            "last_updated": meet['last_updated'].isoformat(),
+            "name": meet["name"],
+            "venue": meet["venue"],
+            "designator": meet["designator"],
+            "startdate": meet["startdate"],
+            "enddate": meet["enddate"],
+            "season": meet["season"],
+            "concluded": meet["concluded"],
+            "host": meet["host"],
+            "format": meet["format"],
+            "pwarmups": meet["pwarmups"],
+            "fwarmups": meet["fwarmups"],
+            "pstart": meet["pstart"],
+            "fstart": meet["fstart"],
+            "infopath": meet["infopath"],
+            "heatspath": meet["heatspath"],
+            "sessionpath": meet["sessionpath"],
+            "resultspath": meet["resultspath"],
+            "scorespath": meet["scorespath"],
+            "psychpath": meet["psychpath"],
+            "last_updated": meet["last_updated"].isoformat(),
         }
     )
 
@@ -1823,49 +2014,48 @@ async def update_meet_geninfo(request: web.Request) -> web.Response:
     if "designator" in info:
         fields["designator"] = f"'{info['designator']}'"
     if "season" in info:
-        fields["season"] = info['season']
+        fields["season"] = info["season"]
     if "concluded" in info:
-        fields["concluded"] = info['concluded']
+        fields["concluded"] = info["concluded"]
     if "host" in info:
         fields["host"] = f"'{info['host']}'"
     if "format" in info:
         fields["format"] = f"'{info['format']}'"
     if "notes" in info:
         fields["notes"] = f"'{info['notes']}'"
-    db = request.config_dict['DB']
+    db = request.config_dict["DB"]
     if fields:
         field_values = ""
         for field in fields:
             field_values += f"{field} = {fields[field]}, "
         await db.execute(
-            f"UPDATE meets SET {field_values[:-2]}, last_updated = default WHERE id = $1", int(meet_id)
+            f"UPDATE meets SET {field_values[:-2]}, last_updated = default WHERE id = $1",
+            int(meet_id),
         )
-    meet = await db.fetchrow(
-        "SELECT * FROM meets WHERE id = $1", int(meet_id)
-    )
+    meet = await db.fetchrow("SELECT * FROM meets WHERE id = $1", int(meet_id))
     return web.json_response(
         {
             "id": meet_id,
-            "name": meet['name'],
-            "venue": meet['venue'],
-            "designator": meet['designator'],
-            "startdate": meet['startdate'],
-            "enddate": meet['enddate'],
-            "season": meet['season'],
-            "concluded": meet['concluded'],
-            "host": meet['host'],
-            "format": meet['format'],
-            "pwarmups": meet['pwarmups'],
-            "fwarmups": meet['fwarmups'],
-            "pstart": meet['pstart'],
-            "fstart": meet['fstart'],
-            "infopath": meet['infopath'],
-            "heatspath": meet['heatspath'],
-            "sessionpath": meet['sessionpath'],
-            "resultspath": meet['resultspath'],
-            "scorespath": meet['scorespath'],
-            "psychpath": meet['psychpath'],
-            "last_updated": meet['last_updated'].isoformat(),
+            "name": meet["name"],
+            "venue": meet["venue"],
+            "designator": meet["designator"],
+            "startdate": meet["startdate"],
+            "enddate": meet["enddate"],
+            "season": meet["season"],
+            "concluded": meet["concluded"],
+            "host": meet["host"],
+            "format": meet["format"],
+            "pwarmups": meet["pwarmups"],
+            "fwarmups": meet["fwarmups"],
+            "pstart": meet["pstart"],
+            "fstart": meet["fstart"],
+            "infopath": meet["infopath"],
+            "heatspath": meet["heatspath"],
+            "sessionpath": meet["sessionpath"],
+            "resultspath": meet["resultspath"],
+            "scorespath": meet["scorespath"],
+            "psychpath": meet["psychpath"],
+            "last_updated": meet["last_updated"].isoformat(),
         }
     )
 
@@ -1890,40 +2080,39 @@ async def update_meet_filesinfo(request: web.Request) -> web.Response:
         fields["scorespath"] = f"'{info['scorespath']}'"
     if "psychpath" in info:
         fields["psychpath"] = f"'{info['psychpath']}'"
-    db = request.config_dict['DB']
+    db = request.config_dict["DB"]
     if fields:
         field_values = ""
         for field in fields:
             field_values += f"{field} = {fields[field]}, "
         await db.execute(
-            f"UPDATE meets SET {field_values[:-2]}, last_updated = default WHERE id = $1", int(meet_id)
+            f"UPDATE meets SET {field_values[:-2]}, last_updated = default WHERE id = $1",
+            int(meet_id),
         )
-    meet = await db.fetchrow(
-        "SELECT * FROM meets WHERE id = $1", int(meet_id)
-    )
+    meet = await db.fetchrow("SELECT * FROM meets WHERE id = $1", int(meet_id))
     return web.json_response(
         {
             "id": meet_id,
-            "name": meet['name'],
-            "venue": meet['venue'],
-            "designator": meet['designator'],
-            "startdate": meet['startdate'],
-            "enddate": meet['enddate'],
-            "season": meet['season'],
-            "concluded": meet['concluded'],
-            "host": meet['host'],
-            "format": meet['format'],
-            "pwarmups": meet['pwarmups'],
-            "fwarmups": meet['fwarmups'],
-            "pstart": meet['pstart'],
-            "fstart": meet['fstart'],
-            "infopath": meet['infopath'],
-            "heatspath": meet['heatspath'],
-            "sessionpath": meet['sessionpath'],
-            "resultspath": meet['resultspath'],
-            "scorespath": meet['scorespath'],
-            "psychpath": meet['psychpath'],
-            "last_updated": meet['last_updated'].isoformat(),
+            "name": meet["name"],
+            "venue": meet["venue"],
+            "designator": meet["designator"],
+            "startdate": meet["startdate"],
+            "enddate": meet["enddate"],
+            "season": meet["season"],
+            "concluded": meet["concluded"],
+            "host": meet["host"],
+            "format": meet["format"],
+            "pwarmups": meet["pwarmups"],
+            "fwarmups": meet["fwarmups"],
+            "pstart": meet["pstart"],
+            "fstart": meet["fstart"],
+            "infopath": meet["infopath"],
+            "heatspath": meet["heatspath"],
+            "sessionpath": meet["sessionpath"],
+            "resultspath": meet["resultspath"],
+            "scorespath": meet["scorespath"],
+            "psychpath": meet["psychpath"],
+            "last_updated": meet["last_updated"].isoformat(),
         }
     )
 
@@ -1969,25 +2158,27 @@ async def get_season_schedule(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     season = request.match_info["code"]
     meets = await fetch_meets_by_season(db, season)
-    html = '<tr><th style="width: 80%;">Meet</th><th style="width: 20%;">Files</th></tr>'
+    html = (
+        '<tr><th style="width: 80%;">Meet</th><th style="width: 20%;">Files</th></tr>'
+    )
     for meet in meets:
         times = ""
-        if meet['format'] == "pf":
+        if meet["format"] == "pf":
             times = f'Warmups @ {meet["pwarmups"]} (P) {meet["fwarmups"]} (F) | Meet @ {meet["pstart"]} (P) {meet["fstart"]} (F)'
         else:
             times = f'Warmups @ {meet["fwarmups"]} | Meet @ {meet["fstart"]}'
         files = ""
-        if meet['infopath']:
+        if meet["infopath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["infopath"]}">INFO</a></b><br>'
-        if meet['heatspath']:
+        if meet["heatspath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["heatspath"]}">HEATS</a></b><br>'
-        if meet['psychpath']:
+        if meet["psychpath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["psychpath"]}">PSYCH</a></b><br>'
-        if meet['sessionpath']:
+        if meet["sessionpath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["sessionpath"]}">SESSIONS</a></b><br>'
-        if meet['resultspath']:
+        if meet["resultspath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["resultspath"]}">RESULTS</a></b><br>'
-        if meet['scorespath']:
+        if meet["scorespath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["scorespath"]}">SCORES</a></b><br>'
         html += f'<tr class="meet-row" id="{meet["startdate"][:-4]}-{meet["designator"]}"><td style="width: 80%; background-color: #{venue_colors[meet["venue"]]};" class="meet-info-col"><b>{meet["officialname"]}</b><br>{venues[meet["venue"]]} ({meet["venue"]})<br>{create_date(meet["startdate"], meet["enddate"])}<br>{times}<br><b style="color: darkred">{meet["notes"]}</b></td><td style="width: 20%; background-color: #{venue_colors[meet["venue"]]};" class="meet-files-col">{files[:-4]}</td></tr>'
     return web.Response(body=html)
@@ -1997,8 +2188,11 @@ async def get_season_schedule(request: web.Request) -> web.Response:
 async def get_last_meet_update(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     season = request.match_info["code"]
-    meet = await db.fetchrow("SELECT * FROM meets WHERE season = $1 ORDER BY last_updated DESC LIMIT 1", int(season))
-    date = meet['last_updated']
+    meet = await db.fetchrow(
+        "SELECT * FROM meets WHERE season = $1 ORDER BY last_updated DESC LIMIT 1",
+        int(season),
+    )
+    date = meet["last_updated"]
     date = date - datetime.timedelta(hours=5)
     formatted_date = f'{date.day} {date.strftime("%B")[0:3].upper()} {date.year}'
     return web.Response(body=formatted_date)
@@ -2020,26 +2214,28 @@ async def get_meets_within_two_weeks(request: web.Request) -> web.Response:
     dwb = f"{dateweekbefore.year}{dateweekbefore.month:02d}{dateweekbefore.day:02d}"
     dateweeklater = datenow + datetime.timedelta(days=14)
     dwl = f"{dateweeklater.year}{dateweeklater.month:02d}{dateweeklater.day:02d}"
-    meets = await db.fetch(f"SELECT * FROM meets where startdate BETWEEN '{dwb}' AND '{dwl}' ORDER BY startdate")
+    meets = await db.fetch(
+        f"SELECT * FROM meets where startdate BETWEEN '{dwb}' AND '{dwl}' ORDER BY startdate"
+    )
     html = ""
     for meet in meets:
         times = ""
-        if meet['format'] == "pf":
+        if meet["format"] == "pf":
             times = f'Warmups @ {meet["pwarmups"]} (P) {meet["fwarmups"]} (F) | Meet @ {meet["pstart"]} (P) {meet["fstart"]} (F)'
         else:
             times = f'Warmups @ {meet["fwarmups"]} | Meet @ {meet["fstart"]}'
         files = ""
-        if meet['infopath']:
+        if meet["infopath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["infopath"]}">INFO</a></b><br>'
-        if meet['heatspath']:
+        if meet["heatspath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["heatspath"]}">HEATS</a></b><br>'
-        if meet['psychpath']:
+        if meet["psychpath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["psychpath"]}">PSYCH</a></b><br>'
-        if meet['sessionpath']:
+        if meet["sessionpath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["sessionpath"]}">SESSIONS</a></b><br>'
-        if meet['resultspath']:
+        if meet["resultspath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["resultspath"]}">RESULTS</a></b><br>'
-        if meet['scorespath']:
+        if meet["scorespath"]:
             files += f'<b style="text-decoration: underline"><a href="{meet["scorespath"]}">SCORES</a></b><br>'
         html += f'<tr class="meet-row"><td style="width: 85%; background-color: #{venue_colors[meet["venue"]]};" class="meet-info-col"><b>{meet["startdate"][:4]} {meet["host"]} {meet["name"]}</b><br>{venues[meet["venue"]]} ({meet["venue"]})<br>{create_date(meet["startdate"], meet["enddate"])}<br>{times}<br><b style="color: darkred">{meet["notes"]}</b></td><td style="width:15%; background-color: #{venue_colors[meet["venue"]]};" class="meet-files-col">{files[:-4]}</td></tr>'
     return web.Response(body=html)
@@ -2069,7 +2265,7 @@ async def create_entry(request: web.Request) -> web.Response:
     seed = info["seed"]
     time = info["time"]
     splits = list(info["splits"])
-    id = generate_id(3)
+    id = SnowflakeIDGenerator(grad_year=0, id_type=3).generate_id()
     splits = json.dumps(splits)
     db = request.config_dict["DB"]
     await db.execute(
@@ -2176,10 +2372,16 @@ async def fetch_top5_school(db):
             counter += 1
     date = datetime.datetime.now()
     return (
-            f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">SCHOOL '
-            f'RECORDS</span></h2>\n<p'
-            f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
-            + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
+        f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">SCHOOL '
+        f"RECORDS</span></h2>\n<p"
+        f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
+        + tabulate(
+            table,
+            headers=headers,
+            tablefmt="html",
+            numalign="center",
+            stralign="center",
+        )
     )
 
 
@@ -2235,10 +2437,16 @@ async def fetch_top5_program(db):
             counter += 1
     date = datetime.datetime.now()
     return (
-            f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">PROGRAM '
-            f'RECORDS</span></h2>\n<p'
-            f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
-            + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
+        f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">PROGRAM '
+        f"RECORDS</span></h2>\n<p"
+        f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
+        + tabulate(
+            table,
+            headers=headers,
+            tablefmt="html",
+            numalign="center",
+            stralign="center",
+        )
     )
 
 
@@ -2294,10 +2502,16 @@ async def fetch_top5_relays(db):
             counter += 1
     date = datetime.datetime.now()
     return (
-            f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">RELAY '
-            f'RECORDS</span></h2>\n<p'
-            f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
-            + tabulate(table, headers=headers, tablefmt="html", numalign="center", stralign="center")
+        f'<h2>Great Hearts Monte Vista<br><span style="color: darkred; font-weight: bold;">RELAY '
+        f"RECORDS</span></h2>\n<p"
+        f'style="color: darkred">UPDATED: {date.day} {date.strftime("%B")[0:3].upper()} {date.year}</p>\n'
+        + tabulate(
+            table,
+            headers=headers,
+            tablefmt="html",
+            numalign="center",
+            stralign="center",
+        )
     )
 
 
@@ -2326,13 +2540,19 @@ async def update_top5(request: web.Request) -> web.Response:
         return a
     db = request.config_dict["DB"]
     school = await fetch_top5_school(db)
-    with open(f'{os.path.expanduser("~")}/shared/top5-school-autoupdated.html', "w") as f:
+    with open(
+        f'{os.path.expanduser("~")}/shared/top5-school-autoupdated.html', "w"
+    ) as f:
         f.write(school)
     program = await fetch_top5_program(db)
-    with open(f'{os.path.expanduser("~")}/shared/top5-program-autoupdated.html', "w") as f:
+    with open(
+        f'{os.path.expanduser("~")}/shared/top5-program-autoupdated.html', "w"
+    ) as f:
         f.write(program)
     relays = await fetch_top5_relays(db)
-    with open(f'{os.path.expanduser("~")}/shared/top5-relays-autoupdated.html', "w") as f:
+    with open(
+        f'{os.path.expanduser("~")}/shared/top5-relays-autoupdated.html', "w"
+    ) as f:
         f.write(relays)
     return web.Response(body="Done!")
 
@@ -2367,7 +2587,7 @@ async def init_app() -> web.Application:
                 allow_credentials=True,
                 expose_headers="*",
                 allow_headers="*",
-                allow_methods="*"
+                allow_methods="*",
             )
         },
     )

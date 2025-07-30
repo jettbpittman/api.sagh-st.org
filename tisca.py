@@ -1,5 +1,7 @@
 import psycopg2
 import json
+import pdfkit
+import re
 from datetime import datetime
 
 date = datetime.now()
@@ -23,6 +25,8 @@ swimmers = cur.fetchall()
 
 count = dict()
 tiscas = {}
+
+out = ""
 
 for swimmer in swimmers:
     events = []
@@ -52,15 +56,23 @@ myKeys.sort()
 sorted_tiscas = {i: tiscas[i] for i in myKeys}
 
 
-output = f"TISCA Qualifiers (as of {date.day} {date.strftime('%B')[0:3].upper()} {date.year})\n\n"
+output = f""
 
 for i in sorted_tiscas:
     output += i + "\n===========\n"
     for e in tiscas[i]:
         output += f"{e['event']}  -  {e['time']}  -  {e['year']} {e['host']} {e['meet']}\n"
     output += "\n"
-output += f"GENERATED: {datetime.now().strftime('%m/%d/%Y %H:%M:%S')}\nghmvswim.org"
-print(output)
 
-with open("tisca_qualifiers.txt", "w") as f:
-    f.write(output)
+html = f"""
+<html>
+    <body style="text-align: center; margins: auto;">
+        <h2>TISCA Qualifiers (as of {date.day} {date.strftime('%B')[0:3].upper()} {date.year})</h2>
+        <pre style="font-size: small; text-align: left">{output}</pre>
+        <p>GENERATED: {datetime.now().strftime("%m/%d/%Y %H:%M:%S")}</p>
+        <p>ghmvswim.org</p>
+    </body>
+</html>
+"""
+
+pdfkit.from_string(html, f"tisca_qualifiers.pdf")

@@ -21,7 +21,7 @@ swimmers = cur.fetchall()
 count = dict()
 
 for swimmer in swimmers:
-    s = cur.execute(f"SELECT count(*) FROM entries WHERE swimmer = {swimmer[0]}")
+    s = cur.execute(f"SELECT count(*) FROM entries WHERE swimmer = {swimmer[0]} AND seed != 'RL'")
     l = cur.fetchall()
     name = f"{swimmer[3]}, {swimmer[1]} {swimmer[2]}".strip()
     count.update({name: l[0][0]})

@@ -32,6 +32,8 @@ def sortKey(e):
 def sortEvents(e):
     if str(e['number']).endswith("A"):
         return float(e['number'][:-1] + ".5")
+    if str(e['number']).endswith("S"):
+        return float(e['number'][:-1] + ".5")
     else:
         return float(e["number"])
 
@@ -636,6 +638,8 @@ if "--text" or "--html" in sys.argv:
                     else:
                         tbF.add_row(
                             [int(s['finals_place']), s['name'], s['team'], timeStatePF(s, "p"), timeStatePF(s, "f")])
+                    if s['finals_dq_info']:
+                        tbF.add_row(["", s['finals_dq_info']['info_str'], "", "", ""])
 
             tbP = pt()
             tbP.title = f"{ev['name'].strip()} - Preliminaries"
@@ -666,6 +670,8 @@ if "--text" or "--html" in sys.argv:
                              s['seed'], timeStatePF(s, "p")])
                     else:
                         tbP.add_row([int(s['prelim_place']), s['name'], s['team'], s['seed'], timeStatePF(s, "p")])
+                    if s['prelim_dq_info']:
+                        tbP.add_row(["", s['prelim_dq_info']['info_str'], "", "", ""])
             # print(tb)
             # print("\n")
             if "--text" in sys.argv:
@@ -699,6 +705,8 @@ if "--text" or "--html" in sys.argv:
                         pass
                     if s['finals_splits']:
                         tb.add_row(["", niceSplits(s['finals_splits']), "", "", ""])
+                    if s['finals_dq_info']:
+                        tb.add_row(["", s['finals_dq_info']['info_str'], "", "", ""])
             elif ev['diving']:
                 tb.field_names = ["Place", "Name", "Team", "Seed", "Finals"]
                 for s in ev['swimmers']:
@@ -709,6 +717,8 @@ if "--text" or "--html" in sys.argv:
                     tb.add_row([s['finals_place'], s['name'], s['team'], s['seed'], timeStateTF(s)])
                     if s['finals_splits']:
                         tb.add_row(["", niceSplits(s['finals_splits']), "", "", ""])
+                    if s['finals_dq_info']:
+                        tb.add_row(["", s['finals_dq_info']['info_str'], "", "", ""])
 
             if "--text" in sys.argv:
                 print("text")

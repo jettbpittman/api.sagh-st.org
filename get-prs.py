@@ -33,7 +33,7 @@ def sort_by_time(s):
 cur.execute("SELECT * FROM swimmers WHERE active = true AND manager = false ORDER BY last_name, first_name")
 swimmers = cur.fetchall()
 
-cur.execute("SELECT * FROM meets WHERE most_recent = 1")
+cur.execute("SELECT * FROM meets WHERE concluded = true ORDER BY startdate DESC LIMIT 1")
 MEET = cur.fetchone()
 print(f"{MEET[1]} - {MEET[4]}")
 
