@@ -1484,7 +1484,7 @@ async def get_user(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
-    user_id = int(request.match_info["id"])
+    user_id = request.match_info["id"]
     if user_id == "me" or user_id == a.user_id:
         user_id = a.user_id
     elif (await auth_required(request, permissions=4)).status == 200:
@@ -1493,6 +1493,7 @@ async def get_user(request: web.Request) -> web.Response:
         return web.json_response(
             {"status": "failed", "reason": "forbidden"}, status=403
         )
+    user_id = int(user_id)
     db = request.config_dict["DB"]
     user = await fetch_user(db, user_id)
     return web.json_response(user)
