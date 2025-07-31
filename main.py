@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import json
 import calendar
-import threading
+import random
 import os
 import base64
 import secrets
@@ -164,80 +164,28 @@ def get_event_name_simple(e):
         return f"{e[:-1]} Butterfly"
 
 
-class SnowflakeIDGenerator:
-    def __init__(self, grad_year, id_type, epoch=1409547600000):
-        """
-        Snowflake ID Generator
+def generate_id(id_type: int, year: int = 0, join_date: int = None) -> int:
+    """
 
-        :param grad_year: Graduation Year of a Swimmer
-        :param id_type: 1: Swimmer, 2: Meet, 3: Entry, 4: Team, 5: User, 6: Attendance
-        :param epoch: A custom epoch to start counting from (in milliseconds).
-        """
-        self.year = grad_year
-        self.id_type = id_type
-        self.epoch = epoch
-        self.sequence = 0
-        self.last_timestamp = -1
-
-        # Constants
-        self.year_bits = 5
-        self.id_type_bits = 5
-        self.sequence_bits = 12
-
-        self.max_year = -1 ^ (-1 << self.year_bits)
-        self.max_id_type = -1 ^ (-1 << self.id_type_bits)
-        self.max_sequence = -1 ^ (-1 << self.sequence_bits)
-
-        self.year_shift = self.sequence_bits
-        self.id_type_shift = self.year_bits + self.sequence_bits
-        self.timestamp_shift = self.id_type_bits + self.sequence_bits + self.year_bits
-
-        self.lock = threading.Lock()
-
-        if self.year < 0 or self.year > self.max_year:
-            raise ValueError(f"Grad Year must be between 0 and {self.max_year}")
-
-        if self.id_type < 1 or self.id_type > 6:
-            raise ValueError(f"ID Type must be between 0 and 6")
-
-    def _current_timestamp(self):
-        return int(time.time() * 1000)
-
-    def _wait_for_next_millis(self, last_timestamp):
-        timestamp = self._current_timestamp()
-        while timestamp <= last_timestamp:
-            timestamp = self._current_timestamp()
-        return timestamp
-
-    def generate_id(self):
-        """
-        Generate a new Snowflake ID.
-
-        :return: A unique 64-bit ID.
-        """
-        with self.lock:
-            timestamp = self._current_timestamp()
-
-            if timestamp < self.last_timestamp:
-                raise Exception("Clock moved backwards. Refusing to generate ID.")
-
-            if timestamp == self.last_timestamp:
-                self.sequence = (self.sequence + 1) & self.max_sequence
-                if self.sequence == 0:
-                    timestamp = self._wait_for_next_millis(self.last_timestamp)
-            else:
-                self.sequence = 0
-
-            self.last_timestamp = timestamp
-
-            id_ = (
-                ((timestamp - self.epoch) << self.timestamp_shift)
-                | (self.year << self.year_shift)
-                | (self.id_type << self.id_type_shift)
-                | self.sequence
-            )
-
-            return id_
+    :param year: integer - Graduation Year
+    :param id_type: integer - 1: Swimmer, 2: Meet, 3: Entry, 4: Team, 5: User, 6: Attendance
+    :param join_date: integer - UNIX timestamp for when the swimmer joined the team
+    :return:
+    """
+    if join_date:
+        ts = join_date
+        # Set epoch to 1 September, 2014 00:00:00+0000
+        ts = ts - 1409547600
+    else:
+        ts = int(datetime.datetime.utcnow().timestamp())
+        # Set epoch to 1 September, 2014 00:00:00+0000
+        ts = ts - 1409547600
+    return (
+        (int(ts) << 16)
+        + (year << 20)
+        + (id_type << 24)
+        + (random.randint(1, 1000) << 32)
+    )
 
 
 async def fetch_standard(db: asyncpg.Connection, code):
@@ -1257,7 +1205,7 @@ async def register_user(request: web.Request) -> web.Response:
     username = info["username"]
     email = info["email"]
     password = argon2.hash(info["password"])
-    id = SnowflakeIDGenerator(grad_year=0, id_type=5).generate_id()
+    id = generate_id(5)
     db = request.config_dict["DB"]
     await db.execute(
         "INSERT INTO users (id, name, password, email, permissions, username) VALUES ($1, $2, $3, $4, $5, $6)",
@@ -1449,7 +1397,7 @@ async def create_user(request: web.Request) -> web.Response:
         permissions = info["permissions"]
     else:
         permissions = 0
-    id = SnowflakeIDGenerator(grad_year=0, id_type=5).generate_id()
+    id = generate_id(5)
     db = request.config_dict["DB"]
     await db.execute(
         "INSERT INTO users (id, name, password, email, permissions, username) VALUES ($1, $2, $3, $4, $5, $6)",
@@ -1635,7 +1583,7 @@ async def create_swimmer(request: web.Request) -> web.Response:
         dob = info["dob"]
     else:
         dob = None
-    id = SnowflakeIDGenerator(grad_year=year, id_type=1).generate_id()
+    id = generate_id(1)
     if "active" in info:
         active = bool(info["active"])
     else:
@@ -1814,7 +1762,7 @@ async def create_team(request: web.Request) -> web.Response:
     email = info["email"]
     phone = info["phone"]
     code = info["code"]
-    id = SnowflakeIDGenerator(grad_year=0, id_type=4).generate_id()
+    id = generate_id(4)
     db = request.config_dict["DB"]
     await db.execute(
         "INSERT INTO teams (id, name, address, head_coach, email, phone, code) VALUES($1, $2, $3, $4, $5, $6, $7)",
@@ -1915,7 +1863,7 @@ async def create_meet(request: web.Request) -> web.Response:
     format = info["format"]
     host = info["host"]
     concluded = info["concluded"]
-    id = SnowflakeIDGenerator(grad_year=0, id_type=2).generate_id()
+    id = generate_id(2)
     db = request.config_dict["DB"]
     await db.execute(
         "INSERT INTO meets "
@@ -2269,7 +2217,7 @@ async def create_entry(request: web.Request) -> web.Response:
     seed = info["seed"]
     time = info["time"]
     splits = list(info["splits"])
-    id = SnowflakeIDGenerator(grad_year=0, id_type=3).generate_id()
+    id = generate_id(3)
     splits = json.dumps(splits)
     db = request.config_dict["DB"]
     await db.execute(

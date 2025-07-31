@@ -1,6 +1,7 @@
 import time
 import threading
 
+
 class SnowflakeIDGenerator:
     def __init__(self, id_type: int, grad_year: int = 0, epoch=1409547600000):
         """
@@ -67,12 +68,15 @@ class SnowflakeIDGenerator:
 
             self.last_timestamp = timestamp
 
-            id_ = ((timestamp - self.epoch) << self.timestamp_shift) | \
-                  (self.year << self.year_shift) | \
-                  (self.id_type << self.id_type_shift) | \
-                  self.sequence
+            id_ = (
+                ((timestamp - self.epoch) << self.timestamp_shift)
+                | (self.year << self.year_shift)
+                | (self.id_type << self.id_type_shift)
+                | self.sequence
+            )
 
             return id_
+
 
 # Example usage
 if __name__ == "__main__":
