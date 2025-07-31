@@ -1205,6 +1205,10 @@ async def auth_check(request: web.Request) -> web.Response:
         return web.json_response(
             {"status": "failed", "reason": "forbidden"}, status=403
         )
+    if r["linked_swimmer"] is None:
+        ls = None
+    else:
+        ls = str(r["linked_swimmer"])
     return web.json_response(
         {
             "status": "ok",
@@ -1214,7 +1218,7 @@ async def auth_check(request: web.Request) -> web.Response:
                 "username": r["username"],
                 "email": r["email"],
                 "permissions": r["permissions"],
-                "linked_swimmer": str(r["linked_swimmer"]),
+                "linked_swimmer": ls,
             },
         }
     )
