@@ -1751,21 +1751,18 @@ async def db_info(request: web.Request) -> web.Response:
 
 @router.get("/swimmers/{id}")
 async def get_swimmers(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=1)
+    a = await auth_required(request, permissions=0)
+    if a.status != 200:
+        return a
     swimmer_id = int(request.match_info["id"])
     db = request.config_dict["DB"]
-    user = await fetch_user(db, int(a.user_id))
-    if swimmer_id == user['linked_swimmer']:
-        pass
-    elif a.status != 200:
-        return a
     swimmer = await fetch_swimmer(db, swimmer_id)
     return web.json_response(swimmer)
 
 
 @router.get("/swimmers/{id}/entries")
 async def get_swimmer_all_entries(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=1)
+    a = await auth_required(request, permissions=0)
     if a.status != 200:
         return a
     swimmer_id = int(request.match_info["id"])
