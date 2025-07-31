@@ -2129,9 +2129,6 @@ async def get_meet(request: web.Request) -> web.Response:
 @router.get("/meets/{id}/entries")
 @handle_json_error
 async def get_meet_entries(request: web.Request) -> web.Response:
-    a = await auth_required(request, permissions=1)
-    if a.status != 200:
-        return a
     meet_id = int(request.match_info["id"])
     db = request.config_dict["DB"]
     meet = await fetch_entries_by_meet(db, meet_id)
