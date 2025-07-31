@@ -1753,12 +1753,12 @@ async def db_info(request: web.Request) -> web.Response:
 async def get_swimmers(request: web.Request) -> web.Response:
     a = await auth_required(request, permissions=1)
     swimmer_id = int(request.match_info["id"])
-    if swimmer_id == a.user_id:
+    db = request.config_dict["DB"]
+    user = await fetch_user(db, int(a.user_id))
+    if swimmer_id == user['linked_swimmer']:
         pass
     elif a.status != 200:
         return a
-    swimmer_id = int(request.match_info["id"])
-    db = request.config_dict["DB"]
     swimmer = await fetch_swimmer(db, swimmer_id)
     return web.json_response(swimmer)
 
