@@ -417,7 +417,7 @@ async def fetch_entries_by_team(db: asyncpg.Connection, team, meet):
         )
         for entry in rows2:
             s = await fetch_swimmer(db, entry["swimmer"])
-            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}"
+            name = f"{s['last_name']}, {s['first_name']} {s['middle_name'][0]}"
             e = {
                 "swim_id": str(s["id"]),
                 "swimmer": name,
@@ -477,7 +477,7 @@ async def fetch_entries_by_meet(db: asyncpg.Connection, id: int):
         )
         for entry in rows1:
             s = await fetch_swimmer(db, entry["swimmer"])
-            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+            name = f"{s['last_name']}, {s['first_name']} {s['middle_name'][0]}".strip()
             x = {
                 "swimmer": name,
                 "homeschool": s["homeschool"],
@@ -634,7 +634,7 @@ async def fetch_swimmer_entries(db: asyncpg.Connection, id: int):
         )
         for entry in rows1:
             s = await fetch_swimmer(db, entry["swimmer"])
-            name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+            name = f"{s['last_name']}, {s['first_name']} {s['middle_name'][0]}".strip()
             obj["entries"].append(
                 {
                     "swimmer": name,
@@ -654,7 +654,7 @@ async def fetch_swimmer_entries(db: asyncpg.Connection, id: int):
 
 async def fetch_swimmer_best_times(db: asyncpg.Connection, id: int):
     s = await fetch_swimmer_lite(db, id)
-    name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+    name = f"{s['last_name']}, {s['first_name']} {s['middle_name'][0]}".strip()
     g = s["gender"].upper()
     events_list = {}
     events = [
@@ -717,7 +717,7 @@ async def fetch_swimmer_entries_event(db: asyncpg.Connection, id: int, event: st
     entries = []
     for entry in rows:
         s = await fetch_swimmer(db, entry["swimmer"])
-        name = f"{s['last_name']}, {s['first_name']} {s['middle_name']}".strip()
+        name = f"{s['last_name']}, {s['first_name']} {s['middle_name'][0]}".strip()
         entries.append(
             {
                 "swimmer": name,
