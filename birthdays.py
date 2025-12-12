@@ -26,7 +26,10 @@ for swimmer in swimmers:
     print(swimmer)
     if swimmer[11] is None:
         continue
-    birthday = datetime.strptime(swimmer[11], '%Y-%m-%d')
+    try:
+        birthday = datetime.strptime(swimmer[11], '%Y-%m-%d')
+    except ValueError:
+        break
     age_dt = today - birthday
     age = int(age_dt.days / 365)
     print(age)
