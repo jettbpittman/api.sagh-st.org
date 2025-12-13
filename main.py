@@ -42,6 +42,7 @@ venues = {
     "BL": "George Block Aquatic Center",
     "SC": "Schertz Aquatics Center",
     "RR": "RRISD Aquatic Center",
+    "IW": "Ann Barshop Natatorium",
     "TBA": "TBA",
     "UNK": "Unknown",
 }
@@ -67,6 +68,7 @@ venue_colors = {
     "BL": "66DD88",
     "SC": "99CCFF",
     "RR": "FFCCFF",
+    "IW": "99CCFF",
     "TBA": "FFFFFF",
     "UNK": "FFFFFF",
 }

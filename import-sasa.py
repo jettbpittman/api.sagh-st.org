@@ -281,58 +281,58 @@ if "--import" in sys.argv:
                         swimmers = entry['swimmers']
                         lead_ptime = None
                         lead_ftime = None
-                        if entry["prelim_splits"]:
-                            psplits = list(entry["prelim_splits"].values())
-                            psplits.sort()
-                            print(psplits)
-                            if ev["distance"] == 200:
-                                lead_ptime = psplits[0]
-                                lead_psplits = []
-                            if ev["distance"] == 400:
-                                lead_ptime = psplits[1]
-                                lead_psplits = [psplits[0], psplits[1]]
-                            if ev["distance"] == 800:
-                                lead_ptime = psplits[3]
-                                lead_psplits = [psplits[0], psplits[1], psplits[2], psplits[3]]
-                            else:
-                                lead_ptime = psplits[0]
-                                lead_psplits = []
-                            ptime = format_time(entry['prelim_time'])
-                        if entry["finals_splits"]:
-                            fsplits = list(entry["finals_splits"].values())
-                            fsplits.sort()
-                            print(fsplits)
-                            if ev["distance"] == 200:
-                                lead_ftime = fsplits[0]
-                                lead_fsplits = []
-                            if ev["distance"] == 400:
-                                lead_ftime = fsplits[1]
-                                lead_fsplits = [fsplits[0], fsplits[1]]
-                            if ev["distance"] == 800:
-                                lead_ftime = fsplits[3]
-                                lead_fsplits = [fsplits[0], fsplits[1], fsplits[2], fsplits[3]]
-                            else:
-                                lead_ftime = fsplits[0]
-                                lead_fsplits = []
-                            ftime = format_time(entry['finals_time'])
-                        if lead_ptime:
-                            if entry["prelim_time_code"] == "WithTimeTimeCode.DISQUALIFICATION":
-                                continue
-                            m.append(
-                                {
-                                    "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']} {lead_swimmer['middle_initial']}",
-                                    "dob": lead_swimmer['date_of_birth'],
-                                    "gender": lead_swimmer["gender"],
-                                    "usa_swimming_id": lead_swimmer["usa_swimming_id"],
-                                    "event": lead_event_code,
-                                    "seed": "RL",
-                                    "time": format_time(lead_ptime),
-                                    "splits": lead_psplits,
-                                    "swimmers": None,
-                                    "session": "prelims",
-                                    "place": 0
-                                })
-                            m.append({
+                        #if entry["prelim_splits"]:
+                        #     psplits = list(entry["prelim_splits"].values())
+                        #     psplits.sort()
+                        #     print(psplits)
+                        #     if ev["distance"] == 200:
+                        #         lead_ptime = psplits[0]
+                        #         lead_psplits = []
+                        #     if ev["distance"] == 400:
+                        #         lead_ptime = psplits[1]
+                        #         lead_psplits = [psplits[0], psplits[1]]
+                        #     if ev["distance"] == 800:
+                        #         lead_ptime = psplits[3]
+                        #         lead_psplits = [psplits[0], psplits[1], psplits[2], psplits[3]]
+                        #     else:
+                        #         lead_ptime = psplits[0]
+                        #         lead_psplits = []
+                        ptime = format_time(entry['prelim_time'])
+                        # if entry["finals_splits"]:
+                        #     fsplits = list(entry["finals_splits"].values())
+                        #     fsplits.sort()
+                        #     print(fsplits)
+                        #     if ev["distance"] == 200:
+                        #         lead_ftime = fsplits[0]
+                        #         lead_fsplits = []
+                        #     if ev["distance"] == 400:
+                        #         lead_ftime = fsplits[1]
+                        #         lead_fsplits = [fsplits[0], fsplits[1]]
+                        #     if ev["distance"] == 800:
+                        #         lead_ftime = fsplits[3]
+                        #         lead_fsplits = [fsplits[0], fsplits[1], fsplits[2], fsplits[3]]
+                        #     else:
+                        #         lead_ftime = fsplits[0]
+                        #         lead_fsplits = []
+                        ftime = format_time(entry['finals_time'])
+                        #if lead_ptime:
+                        #     if entry["prelim_time_code"] == "WithTimeTimeCode.DISQUALIFICATION":
+                        #         continue
+                        #     m.append(
+                        #         {
+                        #             "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']} {lead_swimmer['middle_initial']}",
+                        #             "dob": lead_swimmer['date_of_birth'],
+                        #             "gender": lead_swimmer["gender"],
+                        #             "usa_swimming_id": lead_swimmer["usa_swimming_id"],
+                        #             "event": lead_event_code,
+                        #             "seed": "RL",
+                        #             "time": format_time(lead_ptime),
+                        #             "splits": lead_psplits,
+                        #             "swimmers": None,
+                        #             "session": "prelims",
+                        #             "place": 0
+                        #         })
+                        m.append({
                                 "name": f"{SHORTNAME}, {entry['relay_team_id']}",
                                 "usa_swimming_id": "",
                                 "gender": "",
@@ -344,30 +344,30 @@ if "--import" in sys.argv:
                                 "swimmers": swimmers,
                                 "session": "prelims",
                                 "place": entry['prelim_overall_place']
-                            })
-                        if lead_ftime:
-                            if entry["finals_time_code"] == "WithTimeTimeCode.DISQUALIFICATION":
-                                continue
-                            m.append(
-                                {
-                                    "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']} {lead_swimmer['middle_initial']}",
-                                    "dob": lead_swimmer['date_of_birth'],
-                                    "gender": lead_swimmer['gender'],
-                                    "usa_swimming_id": lead_swimmer["usa_swimming_id"],
-                                    "event": lead_event_code,
-                                    "seed": "RL",
-                                    "time": format_time(lead_ftime),
-                                    "splits": lead_fsplits,
-                                    "swimmers": None,
-                                    "session": "finals",
-                                    "place": 0
-                                }
-                            )
-                            if entry["prelim_time"]:
-                                seed = format_time(entry["prelim_time"])
-                            else:
-                                seed = format_time(entry["seed_time"])
-                            m.append({
+                        })
+                        # if lead_ftime:
+                        #     if entry["finals_time_code"] == "WithTimeTimeCode.DISQUALIFICATION":
+                        #         continue
+                        #     m.append(
+                        #         {
+                        #             "name": f"{lead_swimmer['last_name']}, {lead_swimmer['first_name']} {lead_swimmer['middle_initial']}",
+                        #             "dob": lead_swimmer['date_of_birth'],
+                        #             "gender": lead_swimmer['gender'],
+                        #             "usa_swimming_id": lead_swimmer["usa_swimming_id"],
+                        #             "event": lead_event_code,
+                        #             "seed": "RL",
+                        #             "time": format_time(lead_ftime),
+                        #             "splits": lead_fsplits,
+                        #             "swimmers": None,
+                        #             "session": "finals",
+                        #             "place": 0
+                        #         }
+                        #     )
+                        if entry["prelim_time"]:
+                            seed = format_time(entry["prelim_time"])
+                        else:
+                            seed = format_time(entry["seed_time"])
+                        m.append({
                                 "name": f"{SHORTNAME}, {entry['relay_team_id']}",
                                 "dob": "",
                                 "gender": "",
@@ -379,7 +379,7 @@ if "--import" in sys.argv:
                                 "swimmers": swimmers,
                                 "session": "finals",
                                 "place": entry["finals_overall_place"]
-                            })
+                        })
                     else:
                         lead_swimmer = entry["swimmers"][0]
                         indiv_event_code = assemble_event_code(ev, True, gender_id(lead_swimmer["gender"]))
@@ -449,6 +449,7 @@ if "--import" in sys.argv:
             try:
                 m_name = name[1].split(" ")[1].strip()
             except IndexError:
+                m_name = " "
                 continue
             c = cur.execute(
                 f"SELECT id, dob, usas_id FROM swimmers WHERE last_name = '{l_name}' AND first_name = '{f_name}' LIMIT 1"
