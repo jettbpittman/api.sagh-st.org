@@ -8,6 +8,7 @@ import base64
 import secrets
 import smtplib
 import ssl
+import argparse
 import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -2524,6 +2525,10 @@ async def ping_http(request: web.Request) -> web.Response:
     return web.json_response(data={"ping": "pong"})
 
 
+parser = argparse.ArgumentParser(description="SAGH API server; --path: path to unix socket")
+parser.add_argument('--path')
+args = parser.parse_args()
+
 async def init_db(app: web.Application) -> AsyncIterator[None]:
     db = await asyncpg.create_pool(
         user=creds["database"]["username"],
@@ -2560,4 +2565,4 @@ async def init_app() -> web.Application:
     return app
 
 
-web.run_app(init_app(), port=creds["port"])
+web.run_app(init_app(), path=args.path)
